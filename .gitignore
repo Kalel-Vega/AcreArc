@@ -1,0 +1,5 @@
+#ignore this file
+data_raw/
+
+#ignore this as well
+*.csv
