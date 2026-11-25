@@ -1,0 +1,56 @@
+{
+  "model_type": "RandomForestRegressor (100 Trees, Max Depth 10)",
+  "grid_points": 784,
+  "r2_score": 0.9557,
+  "mae_t_ha": 0.1597,
+  "feature_importances": [
+    {
+      "feature": "Annual Rainfall (NASA POWER)",
+      "importance": 57.7
+    },
+    {
+      "feature": "Crop Species & Rotation Break",
+      "importance": 19.5
+    },
+    {
+      "feature": "Subsoil Moisture 0-100 cm (GWETROOT)",
+      "importance": 8.0
+    },
+    {
+      "feature": "Soil Nitrogen & Legume Carry-Over",
+      "importance": 3.8
+    },
+    {
+      "feature": "Vegetation Cover Index (MODIS NDVI)",
+      "importance": 3.6
+    },
+    {
+      "feature": "Extreme Heat Days (NASA POWER)",
+      "importance": 3.5
+    },
+    {
+      "feature": "Spring Frost Nights (NASA POWER)",
+      "importance": 1.7
+    },
+    {
+      "feature": "Sowing Topsoil Wetness 0-5 cm (GWETTOP)",
+      "importance": 1.0
+    },
+    {
+      "feature": "Topsoil Acidity pH (ISRIC SoilGrids)",
+      "importance": 0.6
+    },
+    {
+      "feature": "Canopy Water Demand (ECOSTRESS ET)",
+      "importance": 0.2
+    },
+    {
+      "feature": "Evaporative Stress Index (ECOSTRESS ESI)",
+      "importance": 0.2
+    },
+    {
+      "feature": "Soil Clay Content % (ISRIC SoilGrids)",
+      "importance": 0.2
+    }
+  ]
+}
