@@ -1,1521 +1,1342 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>AcreArc — AI Crop Rotation Co-Pilot — Murray–Darling Basin</title>
-<link rel="icon" href="./assets/logo.png" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AcreArc — AI Crop Rotation Co-Pilot · Murray–Darling Basin</title>
+<link rel="icon" href="./assets/logo.jpeg" />
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://cdn.tailwindcss.com"></script>
-<script>
-  tailwind.config = {
-    theme: {
-      extend: {
-        colors: {
-          forest: { 900: '#14532D', 800: '#166534' },
-          sand: '#F7F5EE',
-          wheat: '#D97706',
-          terracotta: '#B45309'
-        }
-      }
-    }
-  };
-</script>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script src="./js/agronomic_engine.js"></script>
 <style>
-  html { scroll-behavior: smooth; }
-  body { background: #F7F5EE; color: #1c1917; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
-  .card { background: #FFFFFF; border: 1px solid #E7E0CC; border-radius: 18px; box-shadow: 0 1px 2px rgba(20,83,45,.06), 0 4px 14px rgba(20,83,45,.04); }
-  .tipwrap { position: relative; display: inline-block; cursor: help; }
-  .tipbox { display: none; position: absolute; z-index: 60; left: 0; top: calc(100% + 6px); width: 270px; max-width: 78vw; background: #14532D; color: #fff; font-size: 12px; line-height: 1.45; font-weight: 400; padding: 9px 11px; border-radius: 10px; text-align: left; box-shadow: 0 8px 24px rgba(0,0,0,.25); text-transform: none; letter-spacing: 0; white-space: normal; }
-  .tipwrap:hover > .tipbox, .tipwrap.open > .tipbox { display: block; }
-  .tip-r > .tipbox { left: auto; right: 0; }
-  .q { display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 9999px; background: #FEF3C7; color: #92400E; font-size: 11px; font-weight: 800; border: 1px solid #F59E0B; }
-  .src { font-size: 11px; font-weight: 600; color: #166534; background: #ECFDF5; border: 1px solid #A7F3D0; padding: 1px 8px; border-radius: 9999px; }
-  .howto { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: #92400E; background: #FFFBEB; border: 1px solid #F59E0B; padding: 3px 10px; border-radius: 9999px; cursor: pointer; white-space: nowrap; }
-  .howto:hover { background: #FEF3C7; }
-  .btn-primary { background: #166534; color: #fff; font-weight: 800; border-radius: 14px; padding: 14px 22px; transition: background .15s, transform .1s; }
-  .btn-primary:hover:not(:disabled) { background: #14532D; }
-  .btn-primary:active:not(:disabled) { transform: scale(.98); }
-  .btn-primary:disabled { opacity: .4; cursor: not-allowed; filter: grayscale(.4); }
-  .btn-ghost { background: #fff; color: #14532D; border: 2px solid #14532D; font-weight: 700; border-radius: 14px; padding: 12px 18px; }
-  .btn-ghost:hover { background: #ECFDF5; }
-  input[type=range] { accent-color: #166534; width: 100%; height: 6px; cursor: pointer; }
-  .score-pill { display: inline-flex; align-items: baseline; gap: 3px; font-weight: 900; font-size: 18px; line-height: 1; padding: 7px 12px; border-radius: 9999px; color: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.18); white-space: nowrap; }
-  .score-pill small { font-size: 11px; font-weight: 700; opacity: .85; }
-  #mapWrap { position: relative; isolation: isolate; z-index: 0; height: 400px; border-radius: 14px; overflow: hidden; border: 2px solid #D6CFB8; }
-  #map { width: 100%; height: 100%; background: #e8efe2; }
-  #mapWrap.map-full { position: fixed; inset: 0; z-index: 1500; height: 100vh; border-radius: 0; border: 0; }
-  #mapWrap:not(.map-full) #mapInfo { display: none; }
-  .pin { width: 22px; height: 22px; background: #D97706; border: 3px solid #fff; border-radius: 50% 50% 50% 0; transform: rotate(-45deg); box-shadow: 0 2px 8px rgba(0,0,0,.45); }
-  .pin.out { background: #DC2626; }
-  .leaflet-bar a.fs-btn { font-size: 18px; line-height: 30px; text-align: center; text-decoration: none; cursor: pointer; display: block; width: 30px; height: 30px; background: #fff; color: #14532D; }
-  .legend-box { background: rgba(255,255,255,.94); border: 1px solid #A7F3D0; border-radius: 10px; padding: 6px 10px; font-size: 12px; font-weight: 700; color: #14532D; display: flex; align-items: center; gap: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
-  .legend-swatch { width: 22px; height: 12px; border: 2px dashed #059669; background: rgba(5,150,105,.12); border-radius: 3px; display: inline-block; }
-  details.drawer > summary { list-style: none; cursor: pointer; }
-  details.drawer > summary::-webkit-details-marker { display: none; }
-  details.drawer[open] .chev { transform: rotate(180deg); }
-  .chev { transition: transform .2s; }
-  .tree-bar { display: flex; gap: 1px; height: 14px; }
-  .tree-bar span { flex: 1; border-radius: 1px; background: #E7E5E4; }
-  .tree-bar span.on { background: #166534; }
-  .fade-in { animation: fadeIn .25s ease; }
-  @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-  .dot { width: 10px; height: 10px; border-radius: 9999px; background: #D6D3D1; transition: all .15s; }
-  .dot.active { background: #166534; width: 26px; }
-  ::selection { background: #FDE68A; }
+  :root{--forest:#14532D;--forest2:#166534;--cream:#F7F5EE;--amber:#D97706;--terra:#B45309;--line:#E4E0D0}
+  html{scroll-behavior:smooth}
+  body{background:var(--cream);color:#1f2a22;font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+  .card{background:#fff;border:1px solid var(--line);border-radius:1rem;box-shadow:0 1px 3px rgba(20,83,45,.08)}
+  .btn-primary{background:var(--forest2);color:#fff;font-weight:800;border-radius:.8rem;padding:.85rem 1.4rem;transition:background .15s,transform .1s;box-shadow:0 2px 6px rgba(20,83,45,.25)}
+  .btn-primary:hover{background:var(--forest)}
+  .btn-primary:active{transform:scale(.98)}
+  .btn-primary:disabled{opacity:.6;cursor:not-allowed;background:#9CA3AF;box-shadow:none;transform:none}
+  .btn-primary:disabled:hover{background:#9CA3AF}
+  .btn-ghost{border:2px solid #CFC9B2;background:#fff;color:var(--forest);font-weight:700;border-radius:.8rem;padding:.7rem 1.1rem;transition:background .15s,border-color .15s}
+  .btn-ghost:hover{background:#F1EEDF;border-color:#A8A184}
+  .btn-amber{background:var(--amber);color:#fff;font-weight:700;border-radius:.7rem;padding:.55rem 1rem}
+  .btn-amber:hover{background:var(--terra)}
+  .how-btn{display:inline-flex;align-items:center;gap:.3rem;font-size:.72rem;font-weight:700;color:var(--forest2);background:#ECFDF3;border:1px solid #BBE5C8;border-radius:999px;padding:.22rem .65rem;white-space:nowrap;transition:background .15s}
+  .how-btn:hover{background:#D1F5DE}
+  .step-badge{display:inline-flex;align-items:center;justify-content:center;width:1.9rem;height:1.9rem;border-radius:999px;background:var(--forest2);color:#fff;font-weight:800;font-size:.95rem;flex:none}
+  .tipped{border-bottom:2px dotted var(--amber);cursor:help}
+  .help-q{display:inline-flex;align-items:center;justify-content:center;width:1.1rem;height:1.1rem;border-radius:999px;background:#FEF3C7;color:var(--terra);font-size:.7rem;font-weight:800;border:1px solid #F5D78A;cursor:help;vertical-align:middle;margin-left:.25rem}
+  .src-tag{display:inline-flex;align-items:center;font-size:.65rem;font-weight:700;color:#475569;background:#F1F5F9;border:1px solid #CBD5E1;border-radius:6px;padding:.05rem .4rem;margin-left:.35rem;cursor:help;vertical-align:middle}
+  #tipBox{position:fixed;z-index:5000;max-width:320px;background:#14301f;color:#fff;font-size:.8rem;line-height:1.35;padding:.55rem .7rem;border-radius:.6rem;box-shadow:0 6px 20px rgba(0,0,0,.3);white-space:pre-line;pointer-events:none}
+  input[type=range]{accent-color:var(--forest2);width:100%;height:1.6rem;cursor:pointer}
+  details.drawer>summary{list-style:none;cursor:pointer}
+  details.drawer>summary::-webkit-details-marker{display:none}
+  details.drawer[open] .chev{transform:rotate(180deg)}
+  .chev{transition:transform .2s}
+  #mapWrap{position:relative;height:430px;border-radius:.9rem;overflow:hidden;border:1px solid var(--line)}
+  #map{height:100%;width:100%;background:#dfe9d8}
+  #mapWrap.map-full{position:fixed;inset:0;height:100%;width:100%;z-index:2000;border-radius:0;border:0}
+  #mapChip{position:absolute;left:10px;bottom:10px;z-index:900;background:rgba(255,255,255,.95);border:1px solid #CFC9B2;border-radius:.6rem;padding:.35rem .6rem;font-size:.78rem;font-weight:600;color:var(--forest);pointer-events:none;max-width:80%}
+  .fs-btn{font-size:18px!important;line-height:30px!important;text-align:center;font-weight:700;cursor:pointer}
+  .fade-in{animation:fade .35s ease both}
+  @keyframes fade{from{opacity:0}to{opacity:1}}
+  .tree{flex:1 1 0;height:16px;border-radius:2px;background:#E5E7EB}
+  .tree.on{background:var(--forest2)}
+  .cal-cell{border-radius:.5rem;padding:.3rem .35rem;min-height:3.9rem;border:1px solid transparent;cursor:help;text-align:left}
+  .cal-ok{background:#DCFCE7;border-color:#86EFAC;color:#14532D}
+  .cal-med{background:#FEF3C7;border-color:#FCD34D;color:#78350F}
+  .cal-high{background:#FEE2E2;border-color:#FCA5A5;color:#7F1D1D}
+  .cal-none{background:#F3F4F6;border-color:#E5E7EB;color:#4B5563}
+  .seg-btn{padding:.5rem 1rem;font-weight:700;font-size:.9rem;border-radius:.6rem;color:#D1FAE5;transition:background .15s,color .15s}
+  .seg-btn[aria-pressed="true"]{background:#fff;color:var(--forest);box-shadow:0 1px 3px rgba(0,0,0,.25)}
+  .climate-card{border:2px solid var(--line);border-radius:.9rem;background:#fff;padding:.75rem .6rem;text-align:center;transition:all .15s;cursor:pointer}
+  .climate-card:hover{border-color:#A8A184}
+  .climate-card[aria-pressed="true"]{border-color:var(--forest2);background:#ECFDF3;box-shadow:0 0 0 3px rgba(22,101,52,.15)}
+  .rot-card{text-align:left;border:2px solid var(--line);border-radius:1rem;background:#fff;padding:1rem;transition:all .15s;cursor:pointer;width:100%}
+  .rot-card:hover{border-color:#A8A184}
+  .rot-card[aria-pressed="true"]{border-color:var(--forest2);background:#F3FBF5;box-shadow:0 0 0 3px rgba(22,101,52,.18)}
+  .leaflet-container{font-family:inherit}
+  .dot-pulse{animation:pulse 1.6s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  .score-pill{display:inline-flex;align-items:baseline;gap:.2rem;flex:none;white-space:nowrap;background:var(--forest);color:#fff;border-radius:999px;padding:.3rem .75rem;font-weight:800;font-size:1.15rem;line-height:1.1;box-shadow:0 1px 3px rgba(20,83,45,.35)}
+  .score-pill small{font-size:.68rem;font-weight:700;color:#A7F3D0}
+  .hz-btn{padding:.25rem .7rem;font-size:.78rem;font-weight:800;border-radius:999px;border:2px solid #CFC9B2;background:#fff;color:var(--forest);transition:all .15s}
+  .hz-btn:hover{border-color:#A8A184}
+  .hz-btn[aria-pressed="true"]{background:var(--forest2);border-color:var(--forest2);color:#fff}
 </style>
 </head>
-<body>
-
-<!-- TOP HEADER BAR -->
-<header class="sticky top-0 border-b border-[#E7E0CC] bg-[#F7F5EE]/95 backdrop-blur" style="z-index:1000">
-  <div class="max-w-7xl mx-auto px-4 py-2.5 flex flex-wrap items-center justify-between gap-3">
+<body class="min-h-screen">
+<!-- ============ TOP HEADER BAR ============ -->
+<header class="sticky top-0 z-50 bg-[#14532D] text-white shadow-md">
+  <div class="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
     <div class="flex items-center gap-3 min-w-0">
-      <img src="./assets/logo.png" alt="AcreArc Logo" class="h-11 w-auto object-contain" />
+      <img src="./assets/logo.jpeg" alt="AcreArc Logo" class="h-11 w-auto object-contain" />
       <div class="min-w-0">
-        <h1 class="text-xl font-extrabold text-[#14532D] leading-tight">AcreArc</h1>
-        <p class="text-xs sm:text-sm text-stone-600 leading-snug">AI Crop Rotation Co-Pilot — Murray–Darling Basin</p>
+        <h1 class="text-xl sm:text-2xl font-extrabold leading-tight tracking-tight">AcreArc</h1>
+        <p class="text-[11px] sm:text-sm text-emerald-100 whitespace-nowrap overflow-hidden text-ellipsis">AI Crop Rotation Co-Pilot — Murray–Darling Basin</p>
       </div>
     </div>
-    <div class="flex items-center gap-2 sm:gap-3">
-      <div class="inline-flex rounded-xl border-2 border-[#14532D] overflow-hidden bg-white" role="group" aria-label="View mode">
-        <button id="viewField" type="button" class="px-3 sm:px-4 py-2 text-sm font-bold" aria-pressed="true">Field View</button>
-        <button id="viewData" type="button" class="px-3 sm:px-4 py-2 text-sm font-bold" aria-pressed="false">Data View</button>
+    <div class="flex items-center gap-2 sm:gap-3 flex-wrap">
+      <div class="flex bg-[#0f3d21] p-1 rounded-xl" role="group" aria-label="View mode">
+        <button id="viewField" type="button" class="seg-btn" aria-pressed="true">Field View</button>
+        <button id="viewData" type="button" class="seg-btn" aria-pressed="false">Data View</button>
       </div>
-      <button id="openTutorial" type="button" class="px-3 sm:px-4 py-2 rounded-xl bg-[#D97706] hover:bg-[#B45309] text-white text-sm font-bold shadow-sm">How AcreArc Works</button>
+      <button id="btnHow" type="button" class="bg-[#D97706] hover:bg-[#B45309] text-white font-bold text-sm px-4 py-2.5 rounded-xl shadow transition-colors">How AcreArc Works</button>
     </div>
   </div>
 </header>
-
-<main class="max-w-7xl mx-auto px-4 py-6">
-  <div id="engineError" class="hidden mb-4 rounded-xl border-2 border-red-300 bg-red-50 text-red-900 px-4 py-3 text-sm font-semibold"></div>
-  <div id="dataNotice" class="hidden mb-4 rounded-xl border border-sky-300 bg-sky-50 text-sky-900 px-4 py-3 text-sm"></div>
-
+<main class="max-w-7xl mx-auto px-3 sm:px-6 py-5 space-y-5">
+  <div id="fallbackBanner" class="hidden rounded-xl border border-amber-300 bg-amber-50 text-amber-900 text-sm px-4 py-3"></div>
+  <div id="engineBanner" class="hidden rounded-xl border border-red-300 bg-red-50 text-red-900 text-sm px-4 py-3"></div>
   <!-- ============ STAGE 1 ============ -->
-  <section id="stage1" class="space-y-6">
-
-    <!-- Step 1 -->
-    <div class="card p-4 sm:p-6">
-      <div class="flex flex-wrap items-start justify-between gap-2 mb-3">
-        <div>
-          <h2 class="text-xl sm:text-2xl font-extrabold text-[#14532D]">Step 1 — Pick Your Region</h2>
-          <p class="text-sm text-stone-600">Restricted to the Murray–Darling Basin. Tap the map, search a town or postcode, or use your GPS.</p>
+  <section id="stage1" class="space-y-5 fade-in">
+    <div class="grid lg:grid-cols-5 gap-5">
+      <!-- Step 1 -->
+      <div class="card p-4 sm:p-5 lg:col-span-3" id="cardMap">
+        <div class="flex items-center justify-between gap-2 mb-3">
+          <div class="flex items-center gap-2.5">
+            <span class="step-badge">1</span>
+            <h2 class="text-xl font-extrabold text-[#14532D]">Pick Your Region</h2>
+          </div>
+          <button type="button" class="how-btn" data-slide="1">❓ How to use</button>
         </div>
-        <button type="button" class="howto" data-slide="1">? How to use</button>
-      </div>
-
-      <div class="flex flex-col lg:flex-row gap-3 mb-3">
-        <form id="searchForm" class="flex flex-1 gap-2" autocomplete="off">
-          <input id="searchInput" type="text" placeholder="Search town or postcode (e.g. Griffith or 2680)" class="flex-1 min-w-0 rounded-xl border-2 border-[#D6CFB8] bg-white px-3 py-2.5 text-sm focus:outline-none focus:border-[#166534]" aria-label="Town or postcode search" />
-          <button type="submit" class="px-4 py-2.5 rounded-xl bg-[#166534] hover:bg-[#14532D] text-white text-sm font-bold">Search</button>
-        </form>
-        <button id="gpsBtn" type="button" class="px-4 py-2.5 rounded-xl border-2 border-[#D97706] text-[#B45309] bg-[#FFFBEB] hover:bg-[#FEF3C7] text-sm font-bold">📍 Use My GPS Location</button>
-      </div>
-      <p id="searchMsg" class="text-xs text-stone-600 mb-2 min-h-[1rem]"></p>
-
-      <div id="quickJump" class="flex flex-wrap gap-2 mb-3" aria-label="Quick jump regions"></div>
-
-      <div id="mapWrap">
-        <div id="map" aria-label="Murray–Darling Basin map"></div>
-        <div id="mapInfo" class="absolute left-1/2 -translate-x-1/2 bottom-6 w-[92%] max-w-xl rounded-xl bg-white/95 border-2 border-[#166534] px-4 py-2 text-sm shadow-lg" style="z-index:900"></div>
-      </div>
-
-      <div class="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-        <span class="text-stone-500">Selected region:</span>
-        <span class="tipwrap" id="regionTip" tabindex="0">
-          <span id="regionNameTxt" class="font-extrabold text-[#14532D] underline decoration-dotted underline-offset-4">—</span>
-          <span id="regionSoil" class="tipbox"></span>
-        </span>
-        <span id="cellInfo" class="text-xs text-stone-500"></span>
-      </div>
-      <div id="oobBanner" class="hidden mt-3 rounded-xl border-2 border-amber-500 bg-amber-50 text-amber-900 px-4 py-3 text-sm font-bold" role="alert"></div>
-    </div>
-
-    <div class="grid lg:grid-cols-2 gap-6">
-      <!-- Step 2 -->
-      <div class="card p-4 sm:p-6">
-        <div class="flex flex-wrap items-start justify-between gap-2 mb-3">
-          <h2 class="text-xl sm:text-2xl font-extrabold text-[#14532D]">
-            Step 2 — <span class="tipwrap" tabindex="0"><span class="underline decoration-dotted underline-offset-4">What Matters Most to You?</span><span class="tipbox">Slide to weight the four goals.</span></span>
-          </h2>
-          <button type="button" class="howto" data-slide="2">? How to use</button>
+        <div class="flex flex-col sm:flex-row gap-2 mb-2">
+          <form id="searchForm" class="flex flex-1 gap-2" autocomplete="off">
+            <input id="searchInput" type="text" placeholder="Search town or postcode (e.g. Leeton or 2680)" aria-label="Town or postcode search"
+                   class="flex-1 min-w-0 rounded-xl border-2 border-stone-300 px-3 py-2.5 text-[15px] focus:outline-none focus:border-[#166534]">
+            <button type="submit" class="btn-primary !px-4 !py-2.5">Search</button>
+          </form>
+          <button id="btnGps" type="button" class="btn-ghost !py-2.5 whitespace-nowrap">📡 Use My GPS Location</button>
         </div>
-        <div id="sliders" class="space-y-4"></div>
-
-        <div class="mt-6 rounded-2xl border-2 border-[#E7E0CC] bg-[#FBFAF5] p-4">
-          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-            <h3 class="text-base font-extrabold text-[#14532D]">Your Current Routine (Baseline)</h3>
-            <div class="inline-flex rounded-lg border-2 border-[#14532D] overflow-hidden bg-white" role="group" aria-label="Planning horizon">
-              <button id="hz3" type="button" class="px-3 py-1.5 text-sm font-bold">3-Year</button>
-              <button id="hz2" type="button" class="px-3 py-1.5 text-sm font-bold">2-Year</button>
+        <div id="searchMsg" class="text-xs text-stone-600 min-h-[1rem] mb-2" aria-live="polite"></div>
+        <div id="basinWarn" class="hidden mb-2 rounded-xl border border-amber-300 bg-amber-50 text-amber-900 text-sm font-semibold px-3 py-2" role="alert">⚠️ Outside Murray–Darling Basin dataset — please pick a location inside the highlighted Basin</div>
+        <div class="flex flex-wrap gap-2 mb-3" id="quickJumps" aria-label="Quick-jump regions"></div>
+        <div id="mapWrap">
+          <div id="map" aria-label="Murray–Darling Basin map. Click anywhere inside the highlighted Basin to pin your paddock."></div>
+          <div id="mapChip">Loading map…</div>
+        </div>
+        <div class="mt-3 flex flex-wrap items-start justify-between gap-2">
+          <div class="min-w-0">
+            <div class="text-xs font-bold uppercase tracking-wide text-[#B45309]">Selected region</div>
+            <h3 id="regionTitle" class="text-lg font-extrabold text-[#14532D] inline-block tipped" tabindex="0">—</h3>
+            <div id="regionSub" class="text-xs text-stone-500"></div>
+          </div>
+          <div id="matchMsg" class="text-sm font-semibold text-[#166534] bg-[#ECFDF3] border border-[#BBE5C8] rounded-lg px-3 py-1.5" aria-live="polite"></div>
+        </div>
+        <p class="text-xs text-stone-500 mt-2">Tip: click anywhere inside the highlighted Basin to drop your own pin — it snaps to the closest satellite grid cell.</p>
+      </div>
+      <!-- Steps 2 & 3 -->
+      <div class="lg:col-span-2 space-y-5">
+        <div class="card p-4 sm:p-5" id="cardPriorities">
+          <div class="flex items-center justify-between gap-2 mb-3">
+            <div class="flex items-center gap-2.5">
+              <span class="step-badge">2</span>
+              <h2 class="text-xl font-extrabold text-[#14532D]"><span id="prioTitle" class="tipped" tabindex="0" data-tip="Slide to weight the four goals. Your rotations are ranked with these weights when you generate the plan.">What Matters Most to You?</span></h2>
             </div>
+            <button type="button" class="how-btn" data-slide="2">❓ How to use</button>
           </div>
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <label class="text-xs font-bold text-stone-600">Year 1
-              <select id="base0" class="mt-1 w-full rounded-lg border-2 border-[#D6CFB8] bg-white px-2 py-2 text-sm font-semibold text-stone-800"></select>
-            </label>
-            <label class="text-xs font-bold text-stone-600">Year 2
-              <select id="base1" class="mt-1 w-full rounded-lg border-2 border-[#D6CFB8] bg-white px-2 py-2 text-sm font-semibold text-stone-800"></select>
-            </label>
-            <label id="baseWrap2" class="text-xs font-bold text-stone-600 col-span-2 sm:col-span-1">Year 3
-              <select id="base2" class="mt-1 w-full rounded-lg border-2 border-[#D6CFB8] bg-white px-2 py-2 text-sm font-semibold text-stone-800"></select>
-            </label>
-          </div>
-          <p class="mt-3 text-xs text-stone-500">AcreArc models Australian broadacre winter &amp; summer-opportunity cycles — pick the crops you have been growing, year by year.</p>
+          <div id="sliders" class="space-y-3"></div>
+          <div class="mt-4 rounded-xl bg-[#F7F5EE] border border-[#E4E0D0] p-3" id="baselineBox"></div>
         </div>
-      </div>
-
-      <div class="space-y-6">
-        <!-- Step 3 -->
-        <div class="card p-4 sm:p-6">
-          <div class="flex flex-wrap items-start justify-between gap-2 mb-3">
-            <h2 class="text-xl sm:text-2xl font-extrabold text-[#14532D]">Step 3 — Season Outlook</h2>
-            <button type="button" class="howto" data-slide="3">? How to use</button>
+        <div class="card p-4 sm:p-5" id="cardClimate">
+          <div class="flex items-center justify-between gap-2 mb-3">
+            <div class="flex items-center gap-2.5">
+              <span class="step-badge">3</span>
+              <h2 class="text-xl font-extrabold text-[#14532D]">Season Outlook</h2>
+            </div>
+            <button type="button" class="how-btn" data-slide="3">❓ How to use</button>
           </div>
-          <div id="climateCards" class="grid sm:grid-cols-3 gap-3"></div>
-        </div>
-
-        <!-- Confirmation -->
-        <div class="card p-4 sm:p-6 border-2" style="border-color:#166534">
-          <div class="flex flex-wrap items-start justify-between gap-2 mb-3">
-            <h2 class="text-xl sm:text-2xl font-extrabold text-[#14532D]">Confirm Your Farm Setup</h2>
-            <button type="button" class="howto" data-slide="0">? How to use</button>
-          </div>
-          <dl id="summaryList" class="divide-y divide-[#EFEAD8] text-sm"></dl>
-          <div class="mt-5 flex flex-col sm:flex-row gap-3">
-            <button id="generateBtn" type="button" class="btn-primary flex-1 text-base">YES — Generate Rotation Plan</button>
-            <button id="resetBtn" type="button" class="btn-ghost">REVERT / Reset Choices</button>
-          </div>
-          <p id="generateHint" class="hidden mt-2 text-xs font-semibold text-amber-800"></p>
+          <div id="climateCards" class="grid grid-cols-3 gap-2.5"></div>
         </div>
       </div>
     </div>
+    <!-- Confirmation Summary -->
+    <div class="card p-4 sm:p-5 border-2 !border-[#166534]" id="confirmPanel">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-2xl">✅</span>
+        <h2 class="text-xl font-extrabold text-[#14532D]">Confirm Your Farm Setup</h2>
+      </div>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="rounded-xl bg-[#F7F5EE] border border-[#E4E0D0] p-3">
+          <div class="text-xs font-bold uppercase text-stone-500">Selected Region</div>
+          <div class="font-extrabold text-[#14532D] text-lg leading-snug"><span id="sumRegion" class="tipped" tabindex="0">—</span></div>
+        </div>
+        <div class="rounded-xl bg-[#F7F5EE] border border-[#E4E0D0] p-3">
+          <div class="text-xs font-bold uppercase text-stone-500">Soil</div>
+          <div class="font-extrabold text-[#14532D] text-lg leading-snug" id="sumSoil">—</div>
+        </div>
+        <div class="rounded-xl bg-[#F7F5EE] border border-[#E4E0D0] p-3">
+          <div class="text-xs font-bold uppercase text-stone-500">Top Priority</div>
+          <div class="font-extrabold text-[#14532D] text-lg leading-snug" id="sumPriority">—</div>
+        </div>
+        <div class="rounded-xl bg-[#F7F5EE] border border-[#E4E0D0] p-3">
+          <div class="text-xs font-bold uppercase text-stone-500">Season Outlook</div>
+          <div class="font-extrabold text-[#14532D] text-lg leading-snug" id="sumClimate">—</div>
+        </div>
+      </div>
+      <div class="mt-4 flex flex-col sm:flex-row gap-3">
+        <button id="btnYes" type="button" class="btn-primary text-lg flex-1 sm:flex-none sm:min-w-[320px]">YES — Generate Rotation Plan →</button>
+        <button id="btnReset" type="button" class="btn-ghost">↺ REVERT / Reset Choices</button>
+      </div>
+      <p id="yesHint" class="hidden mt-2 text-sm font-semibold text-amber-900" role="alert">⚠️ Pick a location inside the highlighted Murray–Darling Basin to enable the rotation plan.</p>
+    </div>
   </section>
-
   <!-- ============ STAGE 2 ============ -->
-  <section id="stage2" class="hidden space-y-6">
-    <div class="card p-3 sm:p-4 flex flex-wrap items-center justify-between gap-3">
-      <button id="revertBtn" type="button" class="btn-ghost text-sm">← Edit Farm Setup (Revert)</button>
-      <div id="s2Chips" class="flex flex-wrap items-center gap-2 text-xs font-bold"></div>
+  <section id="stage2" class="hidden space-y-5">
+    <div class="card p-3 sm:p-4 flex flex-wrap items-center gap-3 justify-between">
+      <button id="btnEdit" type="button" class="btn-ghost">← Edit Farm Setup (Revert)</button>
+      <div id="s2Chips" class="flex flex-wrap items-center gap-2 text-sm"></div>
     </div>
-
-    <div>
-      <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-        <h2 class="text-xl sm:text-2xl font-extrabold text-[#14532D]">Compare Rotations</h2>
-        <button type="button" class="howto" data-slide="4">? How to use</button>
+    <div id="s2Error" class="hidden rounded-xl border border-red-300 bg-red-50 text-red-900 text-sm px-4 py-3"></div>
+    <div class="card p-4 sm:p-5" id="cardRotations">
+      <div class="flex items-center justify-between gap-2 mb-3">
+        <h2 id="rotTitle" class="text-xl font-extrabold text-[#14532D]">Compare 3-Year Rotations</h2>
+        <button type="button" class="how-btn" data-slide="4">❓ How to use</button>
       </div>
-      <div id="s2Cards" class="grid md:grid-cols-3 gap-4"></div>
+      <div id="rotationRow" class="grid md:grid-cols-3 gap-3"></div>
     </div>
-
-    <div>
-      <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
-        <h2 class="text-xl sm:text-2xl font-extrabold text-[#14532D]">Side-by-Side Comparison</h2>
-        <button type="button" class="howto" data-slide="4">? How to use</button>
+    <div id="compareRow" class="grid lg:grid-cols-2 gap-5"></div>
+    <!-- Dig Deeper -->
+    <div class="card p-4 sm:p-5" id="cardDig">
+      <div class="flex items-center justify-between gap-2 mb-3">
+        <h2 class="text-xl font-extrabold text-[#14532D]">🔎 Dig Deeper</h2>
+        <button type="button" class="how-btn" data-slide="5">❓ How to use</button>
       </div>
-      <div id="s2Compare" class="grid lg:grid-cols-2 gap-4"></div>
-    </div>
-
-    <div class="space-y-3">
-      <h2 class="text-xl sm:text-2xl font-extrabold text-[#14532D] pt-2">Dig Deeper</h2>
-
-      <!-- Drawer 1 -->
-      <details class="drawer card" id="drawerLab">
-        <summary class="flex items-center justify-between gap-3 p-4">
-          <span class="font-extrabold text-[#14532D]">1. Optional: Enter Your Paddock Lab Soil Test</span>
-          <span class="flex items-center gap-2"><button type="button" class="howto" data-slide="5">? How to use</button><span class="chev text-[#14532D]">▼</span></span>
-        </summary>
-        <div class="px-4 pb-5 border-t border-[#EFEAD8] pt-4">
-          <div class="flex flex-wrap items-center gap-3 mb-4">
-            <span class="text-sm font-bold text-stone-600">Soil data in use:</span>
-            <span id="labBadge"></span>
+      <div class="space-y-3">
+        <details class="drawer rounded-xl border border-[#E4E0D0] bg-[#FBFAF5]" id="drawerLab">
+          <summary class="flex items-center justify-between gap-3 p-3.5">
+            <span class="flex items-center gap-2.5 font-bold text-[#14532D]"><span class="step-badge !bg-[#D97706]">1</span> Optional: Enter Your Paddock Lab Soil Test</span>
+            <span class="chev text-[#166534]">▼</span>
+          </summary>
+          <div class="px-4 pb-4 space-y-3">
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="text-sm text-stone-600">Soil data in use:</span>
+              <span id="labBadge" class="text-xs font-extrabold px-2.5 py-1 rounded-full bg-sky-100 text-sky-900 border border-sky-300">Regional Satellite Estimate</span>
+            </div>
+            <div class="grid sm:grid-cols-2 gap-3 max-w-xl">
+              <label class="block">
+                <span class="text-sm font-semibold text-stone-700">pH (CaCl2)</span>
+                <input id="labPH" type="number" step="0.1" min="3.5" max="9.5" inputmode="decimal" class="mt-1 w-full rounded-xl border-2 border-stone-300 px-3 py-2.5 focus:outline-none focus:border-[#166534]">
+              </label>
+              <label class="block">
+                <span class="text-sm font-semibold text-stone-700">Deep N (kg/ha)</span>
+                <input id="labN" type="number" step="1" min="0" max="500" inputmode="decimal" class="mt-1 w-full rounded-xl border-2 border-stone-300 px-3 py-2.5 focus:outline-none focus:border-[#166534]">
+              </label>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button id="labApply" type="button" class="btn-primary !py-2.5">Apply</button>
+              <button id="labClear" type="button" class="btn-ghost !py-2.5">Clear</button>
+            </div>
+            <div id="labMsg" class="text-sm text-stone-700" aria-live="polite"></div>
+            <p class="text-xs text-stone-500">Valid range: pH 3.5–9.5, Deep N 0–500 kg/ha. Applying recalculates all rotations instantly.</p>
           </div>
-          <div class="grid sm:grid-cols-3 gap-4 items-end">
-            <label class="text-xs font-bold text-stone-600">pH (CaCl₂)
-              <input id="labPH" type="number" step="0.1" min="3.5" max="9.5" placeholder="e.g. 5.8" class="mt-1 w-full rounded-lg border-2 border-[#D6CFB8] px-3 py-2 text-sm font-semibold" />
-            </label>
-            <label class="text-xs font-bold text-stone-600">Deep N (kg/ha)
-              <input id="labN" type="number" step="1" min="0" max="600" placeholder="e.g. 60" class="mt-1 w-full rounded-lg border-2 border-[#D6CFB8] px-3 py-2 text-sm font-semibold" />
-            </label>
-            <label class="flex items-center gap-2 text-sm font-bold text-[#14532D] pb-2">
-              <input id="labUse" type="checkbox" class="h-5 w-5 accent-[#166534]" /> Use my lab values
-            </label>
-          </div>
-          <p id="labMsg" class="mt-2 text-xs font-semibold text-amber-800 min-h-[1rem]"></p>
-          <div class="mt-3 flex flex-wrap items-center gap-3">
-            <button id="labClear" type="button" class="btn-ghost text-sm !py-2">Clear lab values</button>
-            <span id="labEffective" class="text-sm text-stone-700"></span>
-          </div>
-          <p class="mt-3 text-xs text-stone-500">Entering your own paddock numbers replaces the regional satellite estimate for soil pH and starting deep nitrogen, and every ranking above updates instantly.</p>
-        </div>
-      </details>
-
-      <!-- Drawer 2 -->
-      <details class="drawer card">
-        <summary class="flex items-center justify-between gap-3 p-4">
-          <span class="font-extrabold text-[#14532D]">2. How Does the AI Calculate the Crop Rotation Viability Score?</span>
-          <span class="flex items-center gap-2"><button type="button" class="howto" data-slide="4">? How to use</button><span class="chev text-[#14532D]">▼</span></span>
-        </summary>
-        <div id="scoreBox" class="px-4 pb-5 border-t border-[#EFEAD8] pt-4"></div>
-      </details>
-
-      <!-- Drawer 3 -->
-      <details class="drawer card">
-        <summary class="flex items-center justify-between gap-3 p-4">
-          <span class="font-extrabold text-[#14532D]">3. Multi-Year Sowing &amp; Frost/Heat Calendar</span>
-          <span class="flex items-center gap-2"><button type="button" class="howto" data-slide="5">? How to use</button><span class="chev text-[#14532D]">▼</span></span>
-        </summary>
-        <div id="calBox" class="px-4 pb-5 border-t border-[#EFEAD8] pt-4"></div>
-      </details>
-
-      <!-- Drawer 4 -->
-      <details class="drawer card">
-        <summary class="flex items-center justify-between gap-3 p-4">
-          <span class="font-extrabold text-[#14532D]">4. Underlying Satellite &amp; Soil Readings</span>
-          <span class="flex items-center gap-2"><button type="button" class="howto" data-slide="5">? How to use</button><span class="chev text-[#14532D]">▼</span></span>
-        </summary>
-        <div id="readBox" class="px-4 pb-5 border-t border-[#EFEAD8] pt-4"></div>
-      </details>
-
-      <!-- Drawer 5 -->
-      <details class="drawer card">
-        <summary class="flex items-center justify-between gap-3 p-4">
-          <span class="font-extrabold text-[#14532D]">5. AI Ethics, Feature Importance &amp; Local Agronomist Check</span>
-          <span class="flex items-center gap-2"><button type="button" class="howto" data-slide="5">? How to use</button><span class="chev text-[#14532D]">▼</span></span>
-        </summary>
-        <div id="ethicsBox" class="px-4 pb-5 border-t border-[#EFEAD8] pt-4"></div>
-      </details>
+        </details>
+        <details class="drawer rounded-xl border border-[#E4E0D0] bg-[#FBFAF5]">
+          <summary class="flex items-center justify-between gap-3 p-3.5">
+            <span class="flex items-center gap-2.5 font-bold text-[#14532D]"><span class="step-badge !bg-[#D97706]">2</span> How Does the AI Calculate the Crop Rotation Viability Score?</span>
+            <span class="chev text-[#166534]">▼</span>
+          </summary>
+          <div class="px-4 pb-4" id="bodyScore"></div>
+        </details>
+        <details class="drawer rounded-xl border border-[#E4E0D0] bg-[#FBFAF5]">
+          <summary class="flex items-center justify-between gap-3 p-3.5">
+            <span class="flex items-center gap-2.5 font-bold text-[#14532D]"><span class="step-badge !bg-[#D97706]">3</span> <span id="calTitle">36-Month Sowing &amp; Frost/Heat Calendar</span></span>
+            <span class="chev text-[#166534]">▼</span>
+          </summary>
+          <div class="px-4 pb-4" id="bodyCalendar"></div>
+        </details>
+        <details class="drawer rounded-xl border border-[#E4E0D0] bg-[#FBFAF5]">
+          <summary class="flex items-center justify-between gap-3 p-3.5">
+            <span class="flex items-center gap-2.5 font-bold text-[#14532D]"><span class="step-badge !bg-[#D97706]">4</span> Underlying Satellite &amp; Soil Readings</span>
+            <span class="chev text-[#166534]">▼</span>
+          </summary>
+          <div class="px-4 pb-4" id="bodyReadings"></div>
+        </details>
+        <details class="drawer rounded-xl border border-[#E4E0D0] bg-[#FBFAF5]">
+          <summary class="flex items-center justify-between gap-3 p-3.5">
+            <span class="flex items-center gap-2.5 font-bold text-[#14532D]"><span class="step-badge !bg-[#D97706]">5</span> AI Ethics, Feature Importance &amp; Local Agronomist Check</span>
+            <span class="chev text-[#166534]">▼</span>
+          </summary>
+          <div class="px-4 pb-4" id="bodyEthics"></div>
+        </details>
+      </div>
     </div>
   </section>
+  <footer class="text-center text-xs text-stone-500 pb-6">
+    AcreArc · Decision support only. Always confirm with a local agronomist before changing your rotation.
+  </footer>
 </main>
-
-<!-- FOOTER -->
-<footer class="border-t border-[#E7E0CC] mt-8 py-6 px-4 text-center text-sm text-stone-600">AcreArc · Decision support only. Always confirm with a local agronomist before changing your rotation.</footer>
-
-<!-- TUTORIAL MODAL -->
-<div id="tutorial" class="hidden fixed inset-0 flex items-center justify-center p-3 sm:p-6 bg-black/60" style="z-index:3000" role="dialog" aria-modal="true" aria-labelledby="tutTitle">
-  <div class="bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[94vh] overflow-y-auto">
-    <div class="flex items-center justify-between px-5 pt-4">
-      <span id="tutKicker" class="text-xs font-extrabold uppercase tracking-wider text-[#B45309]"></span>
-      <button id="tutClose" type="button" class="rounded-full w-9 h-9 flex items-center justify-center text-stone-600 hover:bg-stone-100 text-xl" aria-label="Close tutorial (Esc)">✕</button>
+<!-- ============ FLOATING TOOLTIP ============ -->
+<div id="tipBox" class="hidden" role="tooltip"></div>
+<!-- ============ TUTORIAL MODAL ============ -->
+<div id="tutModal" class="fixed inset-0 z-[3000] hidden items-center justify-center p-3 sm:p-6" role="dialog" aria-modal="true" aria-labelledby="tutTitle">
+  <div id="tutBackdrop" class="absolute inset-0 bg-black/60"></div>
+  <div class="relative bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[94vh] overflow-y-auto">
+    <div class="flex items-center justify-between px-5 py-3 bg-[#14532D] text-white rounded-t-2xl sticky top-0 z-10">
+      <div>
+        <div id="tutKicker" class="text-xs font-bold uppercase tracking-wider text-amber-300"></div>
+        <h2 id="tutTitle" class="text-lg sm:text-xl font-extrabold"></h2>
+      </div>
+      <button id="tutClose" type="button" class="text-2xl leading-none px-2 hover:text-amber-300" aria-label="Close tutorial">✕</button>
     </div>
-    <div class="px-5 pb-2">
-      <h3 id="tutTitle" class="text-2xl font-extrabold text-[#14532D] mt-1"></h3>
-      <div id="tutSvg" class="my-3 rounded-2xl border border-[#E7E0CC] bg-[#FBFAF5] p-2 flex justify-center"></div>
-      <ul id="tutBody" class="space-y-2 text-sm sm:text-base text-stone-700 list-disc pl-5"></ul>
+    <div class="p-4 sm:p-6">
+      <div id="tutArt" class="rounded-xl overflow-hidden border border-[#E4E0D0]"></div>
+      <p id="tutText" class="mt-4 text-[15px] text-stone-700 leading-relaxed"></p>
+      <ul id="tutBullets" class="mt-2 space-y-1.5 text-[15px] text-stone-700"></ul>
     </div>
-    <div class="flex items-center justify-between gap-3 px-5 py-4 border-t border-[#EFEAD8] mt-3">
-      <button id="tutPrev" type="button" class="btn-ghost text-sm !py-2">Previous</button>
-      <div id="tutDots" class="flex items-center gap-2"></div>
-      <button id="tutNext" type="button" class="btn-primary text-sm !py-2.5">Next</button>
+    <div class="px-4 sm:px-6 pb-5 flex items-center justify-between gap-3">
+      <button id="tutPrev" type="button" class="btn-ghost">Previous</button>
+      <div id="tutDots" class="flex items-center gap-2" role="tablist" aria-label="Tutorial slides"></div>
+      <button id="tutNext" type="button" class="btn-primary !py-2.5">Next</button>
     </div>
   </div>
 </div>
-
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="./js/agronomic_engine.js"></script>
 <script>
 (function () {
   'use strict';
-
-  /* ===================== ENGINE & CONSTANTS ===================== */
-  var E = window.AcreArcEngine || null;
-  var CROPS = (E && E.SUPPORTED_CROPS) || ["Wheat", "Barley", "Canola", "Chickpea", "Lupin", "Field Pea", "Forage Sorghum"];
-  var BOUNDS = (E && E.MDB_BOUNDS) || { south: -37.6, north: -24.6, west: 138.4, east: 152.6, maxSnapKm: 55 };
-  var QUICK = (E && E.QUICK_JUMP_REGIONS) || [];
-  var SNAP_KM = (BOUNDS && BOUNDS.maxSnapKm) || 55;
-  var GRIFFITH = { lat: -34.28, lng: 146.04, name: 'Griffith, NSW' };
-
-  var CLIMATES = [
-    { key: 'normal', label: 'Normal Season', icon: '🌤️', desc: 'Typical rainfall and temperatures for the Basin.' },
-    { key: 'dry', label: 'Dry / El Niño', icon: '☀️', desc: 'Below-average rain, hotter spells, more frost and heat stress on dry soils.' },
-    { key: 'wet', label: 'Wet / La Niña', icon: '🌧️', desc: 'Above-average rain: strong upside, but waterlogging and disease risk.' }
-  ];
-  var PRIORITY_DEFS = [
-    { key: 'water', label: 'Water Saving', icon: '💧' },
-    { key: 'soil', label: 'Soil Health & Nitrogen', icon: '🌱' },
-    { key: 'erosion', label: 'Erosion Control', icon: '🛡️' },
-    { key: 'profit', label: 'Farm Profit', icon: '💰' }
-  ];
-  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-  var SAMPLE_CELL = {
-    cell_id: 'SAMPLE-GRIFFITH', name: 'Griffith, NSW (sample point)',
-    lat: -34.28, lng: 146.04, latitude: -34.28, longitude: 146.04,
-    ph: 6.2, ph_cacl2: 6.2, clay: 32, clay_pct: 32, sand: 38, soc: 9.5,
-    ndvi: 0.46, T2M: 16.9, PRECTOTCORR: 1.1, GWETTOP: 0.38, GWETROOT: 0.42, ALLSKY_SFC_SW_DWN: 4.9,
-    et: 2.4, esi: 0.62
-  };
-
-  /* ===================== STATE ===================== */
-  var state = {
-    stage: 1,
-    view: 'field',
-    horizon: 3,
-    baseline: ['Wheat', 'Wheat', 'Wheat'],
-    priorities: { water: 50, soil: 60, erosion: 40, profit: 70 },
-    climate: 'normal',
-    lab: { use: false, pH: '', deepN: '' },
-    idx: 0,
-    slide: 0
-  };
-  var grid = [SAMPLE_CELL];
-  var meta = null;
-  var sel = null;
-  var result = null;
-  var map = null, maxB = null, gridLayer = null, hullLayer = null, markerLayer = null, ringLayer = null;
-  var geocodeToken = 0;
-  var labTimer = null;
-  var phCache = {};
-
-  /* ===================== HELPERS ===================== */
-  function $(id) { return document.getElementById(id); }
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
-    });
-  }
-  function isNum(x) { return typeof x === 'number' && isFinite(x); }
-  function fmt(n, d) { if (d == null) d = 1; return isNum(Number(n)) && n !== null && n !== '' ? Number(n).toFixed(d) : '—'; }
-  function signed(n, d) {
-    if (d == null) d = 1;
-    n = Number(n);
-    if (!isFinite(n)) return '—';
-    return (n > 0 ? '+' : n < 0 ? '−' : '') + Math.abs(n).toFixed(d);
-  }
-  function deltaColor(n) { n = Number(n); return n > 0.0001 ? '#166534' : n < -0.0001 ? '#B45309' : '#78716C'; }
-  function cLat(c) { return c ? (c.lat != null ? c.lat : c.latitude) : null; }
-  function cLng(c) { return c ? (c.lng != null ? c.lng : (c.lon != null ? c.lon : c.longitude)) : null; }
-  function haversine(a, b, c, d) {
-    var R = 6371, t = Math.PI / 180;
-    var dLat = (c - a) * t, dLng = (d - b) * t;
-    var x = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(a * t) * Math.cos(c * t) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  /* ---------- helpers ---------- */
+  const $ = (s, r) => (r || document).querySelector(s);
+  const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const isNum = v => typeof v === 'number' && isFinite(v);
+  const fmt = (v, d) => isNum(v) ? v.toFixed(d == null ? 1 : d) : '—';
+  const to100 = v => isNum(v) ? Math.max(0, Math.min(100, v <= 1 ? v * 100 : v)) : 0;
+  const signed = (v, d) => isNum(v) ? (v >= 0 ? '+' : '−') + Math.abs(v).toFixed(d == null ? 2 : d) : '—';
+  const money = v => isNum(v) ? '$' + Math.round(v).toLocaleString('en-AU') : '—';
+  const signedMoney = v => isNum(v) ? (v >= 0 ? '+' : '−') + '$' + Math.round(Math.abs(v)).toLocaleString('en-AU') : '—';
+  const haversine = (a, b, c, d) => {
+    const R = 6371, r = Math.PI / 180;
+    const dLat = (c - a) * r, dLng = (d - b) * r;
+    const x = Math.sin(dLat / 2) ** 2 + Math.cos(a * r) * Math.cos(c * r) * Math.sin(dLng / 2) ** 2;
     return 2 * R * Math.asin(Math.sqrt(x));
-  }
-  function findNum(cell, regexes) {
-    if (!cell) return null;
-    var keys = Object.keys(cell);
-    for (var r = 0; r < regexes.length; r++) {
-      for (var i = 0; i < keys.length; i++) {
-        if (regexes[r].test(keys[i]) && isNum(cell[keys[i]])) return cell[keys[i]];
-      }
-    }
-    return null;
-  }
-  function cropNames(s) {
-    return ((s && s.crops) || []).map(function (c) {
-      if (typeof c === 'string') return c;
-      if (Array.isArray(c)) return c.map(function (x) { return typeof x === 'string' ? x : (x && (x.crop || x.name)) || '—'; }).join(' + ');
-      return (c && (c.crop || c.name)) || '—';
-    });
-  }
-  function seqTitle(s) {
-    var n = cropNames(s);
-    return n.length ? n.join(' → ') : (s && s.title) || '';
-  }
-  function seasonTag(s) {
-    return /summer|opportun/i.test((s && s.seasonalMode) || '') ? 'Winter + Summer Opportunity' : 'Winter Annual';
-  }
-  function climateLabel(k) { for (var i = 0; i < CLIMATES.length; i++) if (CLIMATES[i].key === k) return CLIMATES[i].label; return k; }
-  function topPriorityLabel() {
-    var best = PRIORITY_DEFS[0], bv = -1;
-    PRIORITY_DEFS.forEach(function (p) { if (state.priorities[p.key] > bv) { bv = state.priorities[p.key]; best = p; } });
-    return best.label;
-  }
-  function pct01(v) { v = Number(v); if (!isFinite(v)) return 0; return v <= 1 ? v * 100 : v; }
-
-  /* ===== scores & ratings ===== */
-  function scoreTone(s) {
-    s = Number(s);
-    if (s >= 80) return '#14532D';
-    if (s >= 65) return '#2F855A';
-    if (s >= 50) return '#D97706';
-    if (s >= 35) return '#B45309';
-    return '#B91C1C';
-  }
-  function scorePill(s) {
-    var v = isFinite(Number(s)) ? Math.round(Number(s)) : '—';
-    return '<span class="score-pill" style="background:' + scoreTone(s) + '" aria-label="Match score ' + v + ' out of 100">' + v + '<small>/ 100</small></span>';
-  }
-  var RATINGS = ['EXCELLENT', 'GOOD', 'AVERAGE', 'NEEDS IMPROVEMENT', 'POOR'];
-  var RATING_STYLE = {
-    'EXCELLENT': 'background:#14532D;color:#fff',
-    'GOOD': 'background:#2F855A;color:#fff',
-    'AVERAGE': 'background:#F59E0B;color:#3b2300',
-    'NEEDS IMPROVEMENT': 'background:#C2410C;color:#fff',
-    'POOR': 'background:#B91C1C;color:#fff'
   };
-  function ratingFromScore(s) {
-    s = Number(s);
-    if (s >= 80) return 'EXCELLENT';
-    if (s >= 65) return 'GOOD';
-    if (s >= 50) return 'AVERAGE';
-    if (s >= 35) return 'NEEDS IMPROVEMENT';
-    return 'POOR';
+  /* ---------- constants ---------- */
+  const GRID_URL = './data_processed/mdb_fused_grid.json';
+  const META_URL = './data_processed/model_metadata.json';
+  const FALLBACK_BOUNDS = { south: -37.8, north: -24.5, west: 138.4, east: 152.5, maxSnapKm: 55 };
+  const FALLBACK_CROPS = ['Wheat', 'Barley', 'Canola', 'Chickpea', 'Lupin', 'Field Pea', 'Forage Sorghum'];
+  const OUT_OF_BASIN_MSG = 'Outside Murray–Darling Basin dataset — please pick a location inside the highlighted Basin';
+  const FALLBACK_CELL = {
+    cell_id: 'SAMPLE-GRIFFITH', lat: -34.28, lng: 146.04,
+    annual_rain_mm: 410, mean_temp_c: 17.3, solar_mj_m2_day: 17.4, gwettop: 0.42, gwetroot: 0.47,
+    ndvi_mean: 0.41, et_mm_day: 2.6, esi: 0.62,
+    clay_pct: 31, sand_pct: 32, silt_pct: 37, ph_cacl2: 6.9, soc_g_kg: 9.5
+  };
+  const FALLBACK_META = {
+    model_type: 'Random Forest Regressor', grid_points: 784, r2_score: 0.9557, mae_t_ha: 0.16,
+    feature_importances: [
+      { feature: 'Annual Rainfall', importance: 57.7 }, { feature: 'Rotation Break', importance: 19.5 },
+      { feature: 'Subsoil Moisture', importance: 8.0 }, { feature: 'Soil Clay', importance: 4.6 },
+      { feature: 'Soil pH', importance: 3.9 }, { feature: 'Mean Temperature', importance: 3.1 },
+      { feature: 'Starting Nitrogen', importance: 2.0 }, { feature: 'Vegetation Greenness (NDVI)', importance: 1.2 }
+    ]
+  };
+  const FALLBACK_GRIFFITH = { name: 'Griffith, NSW', lat: -34.28, lng: 146.04, soilDesc: 'Irrigated Riverina red-brown earths: productive clay-loam topsoils over heavier subsoils.' };
+  const PRIORITIES = [
+    { key: 'profit', label: 'Profit', icon: '💰' },
+    { key: 'water', label: 'Water Efficiency', icon: '💧' },
+    { key: 'soil', label: 'Soil & Nitrogen Health', icon: '🌱' },
+    { key: 'erosion', label: 'Erosion Protection', icon: '🛡️' }
+  ];
+  const DEFAULT_PRIORITIES = { profit: 60, water: 70, soil: 60, erosion: 40 };
+  const DEFAULT_BASELINE = ['Wheat', 'Wheat', 'Wheat'];
+  const CLIMATES = [
+    { id: 'dry', label: 'Dry Year', icon: '☀️', text: 'Below-average rain' },
+    { id: 'normal', label: 'Normal Year', icon: '⛅', text: 'Typical rainfall' },
+    { id: 'wet', label: 'Wet Year', icon: '🌧️', text: 'Above-average rain' }
+  ];
+  const SOURCES = {
+    yield: 'Expected harvest comes from a Random Forest trained on yields calibrated from GRDC / NSW DPI agronomic equations. Inputs: NASA POWER climate and ISRIC SoilGrids 2.0 soil properties across 784 grid points. Gross value is yield multiplied by typical grain prices.',
+    confidence: 'Forecast confidence reflects how consistently the 100 decision trees in the Random Forest agree. Model built on NASA POWER + ISRIC SoilGrids 2.0 inputs with GRDC / NSW DPI calibration.',
+    nitrogen: 'Nitrogen balance uses ISRIC SoilGrids 2.0 soil properties plus GRDC / NSW DPI rules for legume nitrogen credits and crop removal.',
+    fit: 'Fit bars combine the model outputs with GRDC / NSW DPI rotation guidance, weighted by your four priority sliders.',
+    climate: 'NASA POWER (about 50 km grid): annual rainfall, temperature, solar radiation and GWETTOP / GWETROOT soil wetness.',
+    soil: 'ISRIC SoilGrids 2.0 (250 m resolution, CC BY 4.0): clay, sand, silt, pH, organic carbon and related soil layers.',
+    veg: 'NASA Earth Observations: MODIS NDVI (vegetation greenness) and ECOSTRESS evapotranspiration (ET) and Evaporative Stress Index (ESI).',
+    calendar: 'Alerts are generated by the AcreArc rule engine using NASA POWER climate, including autumn GWETTOP topsoil wetness, and GRDC / NSW DPI sowing-window guidance.',
+    readings: 'NASA POWER (climate), NASA Earth Observations MODIS NDVI and ECOSTRESS ET/ESI (vegetation and water stress), ISRIC SoilGrids 2.0 (soil, CC BY 4.0).'
+  };
+  const RATING_CLASS = {
+    'EXCELLENT': 'bg-green-700 text-white',
+    'GOOD': 'bg-lime-700 text-white',
+    'AVERAGE': 'bg-amber-400 text-stone-900',
+    'NEEDS IMPROVEMENT': 'bg-orange-600 text-white',
+    'POOR': 'bg-red-700 text-white'
+  };
+  const RATING_ICON = { 'EXCELLENT': '★', 'GOOD': '✔', 'AVERAGE': '●', 'NEEDS IMPROVEMENT': '▲', 'POOR': '✖' };
+  /* ---------- state ---------- */
+  const state = {
+    grid: [], meta: null, usingFallback: false,
+    pin: null, cell: null, distanceKm: 0, inBasin: true,
+    climate: 'normal', engineClimate: 'normal',
+    priorities: Object.assign({}, DEFAULT_PRIORITIES),
+    horizon: 3, baselineCrops: DEFAULT_BASELINE.slice(),
+    lab: { enabled: false, pH: null, deepN: null },
+    view: 'field', stage: 1, selected: 0,
+    result: null, error: null, summaries: [], baseSummary: null
+  };
+  let map = null, pinMarker = null, pinHalo = null, linkLine = null;
+  /* ---------- small UI builders ---------- */
+  const help = t => `<span class="help-q" tabindex="0" data-tip="${esc(t)}">?</span>`;
+  const src = k => `<span class="src-tag" tabindex="0" data-tip="${esc(SOURCES[k])}">Source ⓘ</span>`;
+  const badge = r => {
+    const key = String(r || '').toUpperCase();
+    return `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-extrabold tracking-wide ${RATING_CLASS[key] || 'bg-stone-300 text-stone-900'}">${RATING_ICON[key] || '•'} ${esc(key || 'N/A')}</span>`;
+  };
+  const scorePill = s => `<span class="score-pill" title="Rotation viability score">${isNum(s.matchScore) ? Math.round(s.matchScore) : '—'}<small>/ 100</small></span>`;
+  const seasonBadge = s => s.seasonalMode ? `<span class="inline-flex items-center rounded-full bg-[#ECFDF3] border border-[#BBE5C8] text-[#166534] text-xs font-bold px-2.5 py-0.5">${esc(s.seasonalMode)}</span>` : '';
+  const E = () => window.AcreArcEngine;
+  const BOUNDS = () => (E() && E().MDB_BOUNDS) || FALLBACK_BOUNDS;
+  const hz = () => (state.result && isNum(state.result.horizonYears)) ? state.result.horizonYears : state.horizon;
+  /* ---------- cell helpers ---------- */
+  function findKey(obj, re) {
+    if (!obj) return null;
+    return Object.keys(obj).find(k => re.test(k) && isNum(obj[k])) || null;
   }
-  function normRating(r, fallbackScore) {
-    if (typeof r === 'string') {
-      var u = r.toUpperCase().replace(/[_-]/g, ' ').trim();
-      if (RATINGS.indexOf(u) >= 0) return u;
-      if (/NEED|IMPROV|FAIR|BELOW/.test(u)) return 'NEEDS IMPROVEMENT';
-      if (/EXCEL|GREAT|VERY GOOD/.test(u)) return 'EXCELLENT';
-      if (/GOOD|STRONG|HIGH/.test(u)) return 'GOOD';
-      if (/POOR|BAD|WEAK|LOW/.test(u)) return 'POOR';
-      if (/AVER|OK|MODERATE|MEDIUM/.test(u)) return 'AVERAGE';
+  function cellLat(c) { return isNum(c.lat) ? c.lat : (isNum(c.latitude) ? c.latitude : NaN); }
+  function cellLng(c) { return isNum(c.lng) ? c.lng : (isNum(c.lon) ? c.lon : (isNum(c.longitude) ? c.longitude : NaN)); }
+  function cellId(c) {
+    const k = ['cell_id', 'grid_id', 'id', 'gid', 'ID', 'cellId'].find(x => c[x] != null);
+    return k ? String(c[k]) : fmt(cellLat(c), 2) + ', ' + fmt(cellLng(c), 2);
+  }
+  function clayPct(c) {
+    const k = findKey(c, /clay/i);
+    if (!k) return null;
+    const v = c[k];
+    return v > 100 ? v / 10 : v;
+  }
+  function nearestQuick(lat, lng) {
+    const list = (E() && E().QUICK_JUMP_REGIONS) || [];
+    let best = null, bd = Infinity;
+    list.forEach(r => { const d = haversine(lat, lng, r.lat, r.lng); if (d < bd) { bd = d; best = r; } });
+    return best;
+  }
+  function soilDescription() {
+    const p = state.pin;
+    if (!p) return '';
+    if (!state.inBasin || !state.cell) return OUT_OF_BASIN_MSG + '.';
+    if (p.quick && p.quick.soilDesc) return p.quick.soilDesc;
+    const clay = clayPct(state.cell);
+    const ph = state.result ? state.result.effectivePH : null;
+    const near = nearestQuick(p.lat, p.lng);
+    let t = 'Satellite soil estimate for the nearest grid cell: clay ' + fmt(clay, 0) + '%, pH (CaCl2) ' + fmt(ph, 1) + '.';
+    if (near && near.soilDesc) t += '\nNearest benchmark region — ' + near.name + ': ' + near.soilDesc;
+    return t;
+  }
+  function topPriority() {
+    const vals = PRIORITIES.map(p => state.priorities[p.key]);
+    const max = Math.max.apply(null, vals);
+    if (vals.every(v => v === vals[0])) return 'Balanced — all goals equal';
+    const top = PRIORITIES.filter(p => state.priorities[p.key] === max);
+    return top.map(p => p.icon + ' ' + p.label).join(' + ') + ' (' + max + '/100)';
+  }
+  function climateLabel() { const c = CLIMATES.find(x => x.id === state.climate); return c ? c.icon + ' ' + c.label : state.climate; }
+  function soilSourceName() { return state.result && state.result.isLabOverride ? 'Farmer Lab Soil Test' : 'Regional Satellite Estimate'; }
+  function baselineText() { return state.baselineCrops.slice(0, state.horizon).join(' → '); }
+  /* ---------- engine ---------- */
+  function runEngine() {
+    const eng = E();
+    state.summaries = []; state.baseSummary = null;
+    if (!eng) { state.result = null; state.error = 'The agronomic engine (./js/agronomic_engine.js) did not load.'; return; }
+    if (!state.cell || !state.inBasin) { state.result = null; state.error = null; return; }
+    const tries = state.climate === 'normal' ? ['normal', 'average'] : [state.climate];
+    let lastErr = null;
+    for (const c of tries) {
+      try {
+        const r = eng.evaluateFarm(state.cell, {
+          climate: c,
+          horizonYears: state.horizon,
+          baselineCrops: state.baselineCrops.slice(0, state.horizon),
+          priorities: { water: state.priorities.water, soil: state.priorities.soil, erosion: state.priorities.erosion, profit: state.priorities.profit },
+          labOverride: { enabled: !!state.lab.enabled, pH: state.lab.pH, deepN: state.lab.deepN }
+        });
+        if (r && Array.isArray(r.strategies) && r.strategies.length) {
+          state.result = r; state.engineClimate = c; state.error = null;
+          if (state.selected >= r.strategies.length) state.selected = 0;
+          buildSummaries();
+          return;
+        }
+      } catch (e) { lastErr = e; }
     }
-    if (isNum(Number(r)) && r !== null && r !== '' && typeof r !== 'boolean') return ratingFromScore(Number(r));
-    return fallbackScore != null ? ratingFromScore(fallbackScore) : 'AVERAGE';
+    state.result = null;
+    state.error = lastErr ? ('Engine error: ' + lastErr.message) : 'The engine returned no rotation strategies for this cell.';
   }
-  function ratingBadge(r, big) {
-    return '<span class="inline-block font-extrabold rounded-full ' + (big ? 'px-4 py-1.5 text-sm' : 'px-2.5 py-0.5 text-[11px]') + ' tracking-wide" style="' + RATING_STYLE[r] + '">' + r + '</span>';
+  function safeSummary(s) {
+    try { return E().getFieldViewSummary(s, state.result.baseline, state.cell, state.engineClimate); } catch (e) { return null; }
   }
-
-  /* ===== tooltips ===== */
-  function q(text) { return '<span class="tipwrap tip-r q" tabindex="0" role="note" aria-label="Help">?<span class="tipbox">' + esc(text) + '</span></span>'; }
-  function src(text) { return '<span class="tipwrap tip-r src" tabindex="0">Source ⓘ<span class="tipbox">' + esc(text) + '</span></span>'; }
-
-  /* ===================== INIT ===================== */
-  function init() {
-    if (!E) {
-      var er = $('engineError');
-      er.textContent = 'AcreArc engine (./js/agronomic_engine.js) did not load. Region selection works, but rotation plans cannot be generated until the engine file is available.';
-      er.classList.remove('hidden');
-    }
-    buildControls();
-    initMap();
-    // Pre-select Griffith immediately so nothing is ever blank.
-    var qj = findQuick('Griffith');
-    setLocation(qj ? qj.lat : GRIFFITH.lat, qj ? qj.lng : GRIFFITH.lng, qj ? qj.name : GRIFFITH.name, { regionName: qj ? qj.name : GRIFFITH.name, pan: true, zoom: 7 });
-    syncView();
-    loadData();
-    bindGlobal();
+  function buildSummaries() {
+    state.summaries = state.result.strategies.map(safeSummary);
+    state.baseSummary = safeSummary(state.result.baseline);
   }
-
-  function findQuick(part) {
-    for (var i = 0; i < QUICK.length; i++) if (new RegExp(part, 'i').test(QUICK[i].name)) return QUICK[i];
-    return null;
+  /* ---------- tooltips ---------- */
+  const tipBox = $('#tipBox');
+  let tipPinned = null;
+  function showTip(el) {
+    const t = el.getAttribute('data-tip');
+    if (!t) return;
+    tipBox.textContent = t;
+    tipBox.classList.remove('hidden');
+    const r = el.getBoundingClientRect(), b = tipBox.getBoundingClientRect();
+    let left = r.left + r.width / 2 - b.width / 2;
+    left = Math.max(8, Math.min(left, window.innerWidth - b.width - 8));
+    let top = r.bottom + 8;
+    if (top + b.height > window.innerHeight - 8) top = Math.max(8, r.top - b.height - 8);
+    tipBox.style.left = left + 'px';
+    tipBox.style.top = top + 'px';
   }
-
-  function loadData() {
-    var notice = [];
-    var pGrid = fetch('./data_processed/mdb_fused_grid.json').then(function (r) {
-      if (!r.ok) throw new Error('grid ' + r.status);
-      return r.json();
-    }).then(function (d) {
-      var arr = Array.isArray(d) ? d : (d && (d.grid || d.cells || d.data)) || [];
-      if (!arr.length) throw new Error('empty grid');
-      grid = arr;
-      drawGrid();
-      if (sel) setLocation(sel.lat, sel.lng, sel.label, { regionName: sel.regionName, noGeocode: true });
-    }).catch(function () {
-      notice.push('Grid data (mdb_fused_grid.json) could not be loaded');
-    });
-    var pMeta = fetch('./data_processed/model_metadata.json').then(function (r) {
-      if (!r.ok) throw new Error('meta ' + r.status);
-      return r.json();
-    }).then(function (m) { meta = m; }).catch(function () {
-      notice.push('Model metadata (model_metadata.json) could not be loaded');
-    });
-    Promise.all([pGrid, pMeta]).then(function () {
-      if (notice.length) {
-        var n = $('dataNotice');
-        var fileMode = location.protocol === 'file:';
-        n.innerHTML = '<strong>Running in demo-safe mode.</strong> ' + esc(notice.join('; ')) + (fileMode ? ' — browsers block data files when a page is opened via file://. ' : '. ') + 'AcreArc is using a single sample point at Griffith, NSW. Host the folder on GitHub Pages (or any web server) for the full 784-cell Basin grid.';
-        n.classList.remove('hidden');
-      }
-      if (state.stage === 2 && result) renderStage2();
-      else renderEthics();
-    });
+  function hideTip() { tipBox.classList.add('hidden'); }
+  document.addEventListener('mouseover', e => { const el = e.target.closest('[data-tip]'); if (el && !tipPinned) showTip(el); });
+  document.addEventListener('mouseout', e => { if (!tipPinned && e.target.closest('[data-tip]')) hideTip(); });
+  document.addEventListener('focusin', e => { const el = e.target.closest('[data-tip]'); if (el && !tipPinned) showTip(el); });
+  document.addEventListener('focusout', e => { if (!tipPinned && e.target.closest('[data-tip]')) hideTip(); });
+  document.addEventListener('click', e => {
+    const el = e.target.closest('[data-tip]');
+    if (el) {
+      if (tipPinned === el) { tipPinned = null; hideTip(); }
+      else { tipPinned = el; showTip(el); }
+    } else { tipPinned = null; hideTip(); }
+  });
+  window.addEventListener('scroll', () => { if (tipPinned) showTip(tipPinned); }, { passive: true });
+  /* ---------- stage 1 rendering ---------- */
+  function renderSliders() {
+    $('#sliders').innerHTML = PRIORITIES.map(p => `
+      <div>
+        <div class="flex items-center justify-between text-sm font-bold text-[#14532D]">
+          <label for="sl_${p.key}">${p.icon} ${p.label}</label>
+          <span id="slv_${p.key}" class="text-[#B45309]">${state.priorities[p.key]}</span>
+        </div>
+        <input id="sl_${p.key}" data-prio="${p.key}" type="range" min="0" max="100" step="5" value="${state.priorities[p.key]}">
+      </div>`).join('');
   }
-
-  /* ===================== BUILD STAGE 1 CONTROLS ===================== */
-  function buildControls() {
-    // quick jump
-    var qj = $('quickJump');
-    qj.innerHTML = '';
-    QUICK.forEach(function (r) {
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'quick px-3 py-2 rounded-xl text-sm font-bold border-2 border-[#166534] text-[#14532D] bg-white hover:bg-[#ECFDF5]';
-      b.textContent = r.name;
-      b.dataset.name = r.name;
-      b.addEventListener('click', function () {
-        $('searchMsg').textContent = '';
-        setLocation(r.lat, r.lng, r.name, { regionName: r.name, pan: true, zoom: 8 });
-      });
-      qj.appendChild(b);
-    });
-
-    // sliders
-    var sl = $('sliders');
-    sl.innerHTML = PRIORITY_DEFS.map(function (p) {
-      return '<div><div class="flex items-center justify-between mb-1"><label for="sl-' + p.key + '" class="text-sm font-extrabold text-stone-800">' + p.icon + ' ' + p.label + '</label><span id="slv-' + p.key + '" class="text-sm font-extrabold text-[#166534] tabular-nums">' + state.priorities[p.key] + '</span></div>' +
-        '<input id="sl-' + p.key + '" type="range" min="0" max="100" step="5" value="' + state.priorities[p.key] + '" /></div>';
-    }).join('');
-    PRIORITY_DEFS.forEach(function (p) {
-      $('sl-' + p.key).addEventListener('input', function (e) {
-        state.priorities[p.key] = Number(e.target.value);
-        $('slv-' + p.key).textContent = e.target.value;
-        renderSummary();
-      });
-    });
-
-    // baseline selects
-    [0, 1, 2].forEach(function (i) {
-      var s = $('base' + i);
-      s.innerHTML = CROPS.map(function (c) { return '<option value="' + esc(c) + '">' + esc(c) + '</option>'; }).join('');
-      s.value = state.baseline[i];
-      s.addEventListener('change', function (e) { state.baseline[i] = e.target.value; renderSummary(); });
-    });
-
-    $('hz3').addEventListener('click', function () { state.horizon = 3; syncHorizon(); renderSummary(); });
-    $('hz2').addEventListener('click', function () { state.horizon = 2; syncHorizon(); renderSummary(); });
-    syncHorizon();
-
-    // climate cards
-    renderClimate();
-
-    $('generateBtn').addEventListener('click', generate);
-    $('resetBtn').addEventListener('click', resetAll);
-    $('revertBtn').addEventListener('click', function () { showStage(1); });
-
-    $('viewField').addEventListener('click', function () { state.view = 'field'; syncView(); if (result && state.stage === 2) renderCompare(); });
-    $('viewData').addEventListener('click', function () { state.view = 'data'; syncView(); if (result && state.stage === 2) renderCompare(); });
-    $('openTutorial').addEventListener('click', function () { openTutorial(0); });
-
-    $('searchForm').addEventListener('submit', function (e) { e.preventDefault(); doSearch($('searchInput').value.trim()); });
-    $('gpsBtn').addEventListener('click', doGPS);
-
-    // lab
-    $('labPH').addEventListener('input', onLabInput);
-    $('labN').addEventListener('input', onLabInput);
-    $('labUse').addEventListener('change', function () {
-      state.lab.use = $('labUse').checked;
-      applyLab();
-    });
-    $('labClear').addEventListener('click', function () {
-      $('labPH').value = ''; $('labN').value = ''; $('labUse').checked = false;
-      state.lab = { use: false, pH: '', deepN: '' };
-      $('labMsg').textContent = '';
-      applyLab();
-    });
-  }
-
-  function segClass(active) {
-    return active ? 'background:#14532D;color:#fff' : 'background:#fff;color:#14532D';
-  }
-  function syncView() {
-    $('viewField').style.cssText = segClass(state.view === 'field');
-    $('viewData').style.cssText = segClass(state.view === 'data');
-    $('viewField').setAttribute('aria-pressed', state.view === 'field');
-    $('viewData').setAttribute('aria-pressed', state.view === 'data');
-  }
-  function syncHorizon() {
-    $('hz3').style.cssText = segClass(state.horizon === 3);
-    $('hz2').style.cssText = segClass(state.horizon === 2);
-    $('baseWrap2').style.display = state.horizon === 3 ? '' : 'none';
+  function renderBaseline() {
+    const crops = (E() && Array.isArray(E().SUPPORTED_CROPS) && E().SUPPORTED_CROPS.length) ? E().SUPPORTED_CROPS : FALLBACK_CROPS;
+    const n = state.horizon;
+    const sel = i => `<label class="block min-w-0">
+        <span class="text-[11px] font-bold text-stone-600">Year ${i + 1}</span>
+        <select data-base="${i}" aria-label="Current crop, year ${i + 1}" class="mt-0.5 w-full rounded-lg border-2 border-stone-300 bg-white px-2 py-1.5 text-sm font-semibold text-[#14532D] focus:outline-none focus:border-[#166534]">
+          ${crops.map(c => `<option value="${esc(c)}" ${c === state.baselineCrops[i] ? 'selected' : ''}>${esc(c)}</option>`).join('')}
+        </select></label>`;
+    let cols = '';
+    for (let i = 0; i < n; i++) cols += sel(i);
+    $('#baselineBox').innerHTML = `
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+        <div class="text-xs font-bold uppercase tracking-wide text-[#B45309]">Your Current Routine (Baseline)</div>
+        <div class="flex gap-1.5" role="group" aria-label="Planning horizon">
+          <button type="button" class="hz-btn" data-horizon="2" aria-pressed="${n === 2}">2-Year</button>
+          <button type="button" class="hz-btn" data-horizon="3" aria-pressed="${n === 3}">3-Year</button>
+        </div>
+      </div>
+      <div class="grid gap-2 ${n === 3 ? 'grid-cols-3' : 'grid-cols-2'}">${cols}</div>
+      <div class="mt-2 text-xs text-stone-600">Rotations are compared with: <b class="text-[#14532D]">${esc(baselineText())}</b></div>`;
   }
   function renderClimate() {
-    $('climateCards').innerHTML = CLIMATES.map(function (c) {
-      var on = state.climate === c.key;
-      return '<button type="button" data-climate="' + c.key + '" aria-pressed="' + on + '" class="text-left rounded-2xl p-3 border-2 transition ' + (on ? 'border-[#166534] bg-[#ECFDF5] shadow' : 'border-[#E7E0CC] bg-white hover:border-[#166534]') + '">' +
-        '<div class="text-2xl">' + c.icon + '</div><div class="font-extrabold text-[#14532D] text-sm mt-1">' + c.label + '</div><div class="text-xs text-stone-600 mt-1 leading-snug">' + c.desc + '</div></button>';
-    }).join('');
-    Array.prototype.forEach.call($('climateCards').querySelectorAll('button'), function (b) {
-      b.addEventListener('click', function () { state.climate = b.dataset.climate; renderClimate(); renderSummary(); });
-    });
+    $('#climateCards').innerHTML = CLIMATES.map(c => `
+      <button type="button" class="climate-card" data-climate="${c.id}" aria-pressed="${state.climate === c.id}">
+        <div class="text-3xl">${c.icon}</div>
+        <div class="font-extrabold text-[#14532D] text-sm mt-1">${c.label}</div>
+        <div class="text-xs text-stone-500">${c.text}</div>
+      </button>`).join('');
   }
-
-  /* ===================== MAP ===================== */
+  function renderQuick() {
+    const list = (E() && E().QUICK_JUMP_REGIONS) || [];
+    $('#quickJumps').innerHTML = list.map((r, i) => {
+      const active = state.pin && state.pin.quick && state.pin.quick.name === r.name;
+      return `<button type="button" data-quick="${i}" class="px-3 py-1.5 rounded-full text-sm font-bold border-2 transition-colors ${active ? 'bg-[#166534] text-white border-[#166534]' : 'bg-white text-[#14532D] border-[#CFC9B2] hover:bg-[#F1EEDF]'}">📍 ${esc(r.name)}</button>`;
+    }).join('');
+  }
+  function renderLocation() {
+    if (!state.pin) return;
+    const t = $('#regionTitle');
+    t.textContent = state.pin.label;
+    t.setAttribute('data-tip', soilDescription());
+    const mm = $('#matchMsg');
+    const maxKm = BOUNDS().maxSnapKm || 55;
+    if (state.inBasin && state.cell) {
+      $('#regionSub').textContent = 'Grid cell ' + cellId(state.cell) + ' · ' + fmt(cellLat(state.cell), 2) + ', ' + fmt(cellLng(state.cell), 2);
+      mm.className = 'text-sm font-semibold text-[#166534] bg-[#ECFDF3] border border-[#BBE5C8] rounded-lg px-3 py-1.5';
+      mm.textContent = 'Matched to nearest grid cell ' + state.distanceKm.toFixed(1) + ' km away';
+      $('#mapChip').textContent = '📍 ' + state.pin.label + ' · grid cell ' + state.distanceKm.toFixed(1) + ' km away';
+      $('#basinWarn').classList.add('hidden');
+    } else {
+      $('#regionSub').textContent = 'No Basin grid cell within ' + maxKm + ' km';
+      mm.className = 'text-sm font-semibold text-amber-900 bg-amber-50 border border-amber-300 rounded-lg px-3 py-1.5';
+      mm.textContent = isNum(state.distanceKm) && state.distanceKm > 0 ? 'Nearest grid cell is ' + state.distanceKm.toFixed(0) + ' km away (limit ' + maxKm + ' km)' : 'Outside Basin dataset';
+      $('#mapChip').textContent = '⚠️ ' + state.pin.label + ' · outside Basin dataset';
+      $('#basinWarn').textContent = '⚠️ ' + OUT_OF_BASIN_MSG;
+      $('#basinWarn').classList.remove('hidden');
+    }
+  }
+  function renderSummary() {
+    if (!state.pin) return;
+    const ok = !!(state.inBasin && state.cell);
+    const sr = $('#sumRegion');
+    sr.textContent = state.pin.label;
+    sr.setAttribute('data-tip', soilDescription());
+    if (ok) {
+      const clay = clayPct(state.cell);
+      const ph = state.result ? state.result.effectivePH : null;
+      $('#sumSoil').innerHTML = 'Clay ' + fmt(clay, 0) + '% · pH<sub>CaCl<sub>2</sub></sub> ' + fmt(ph, 1) + (state.view === 'data' ? src('soil') : '');
+    } else {
+      $('#sumSoil').textContent = '—';
+    }
+    $('#sumPriority').textContent = topPriority();
+    $('#sumClimate').textContent = climateLabel();
+    const yes = $('#btnYes');
+    yes.disabled = !(state.result && ok);
+    yes.title = ok ? '' : OUT_OF_BASIN_MSG;
+    $('#yesHint').classList.toggle('hidden', ok);
+    const eb = $('#engineBanner');
+    if (state.error) { eb.textContent = state.error; eb.classList.remove('hidden'); } else { eb.classList.add('hidden'); }
+  }
+  /* ---------- map ---------- */
   function initMap() {
-    var pad = 0.6;
-    maxB = L.latLngBounds([BOUNDS.south - pad, BOUNDS.west - pad], [BOUNDS.north + pad, BOUNDS.east + pad]);
-    map = L.map('map', { minZoom: 5, maxZoom: 12, maxBounds: maxB, maxBoundsViscosity: 1.0, preferCanvas: true, zoomControl: true }).setView([GRIFFITH.lat, GRIFFITH.lng], 7);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }).addTo(map);
-
-    // full-screen toggle placed below zoom +/-
-    var FS = L.Control.extend({
+    const b = BOUNDS();
+    const pad = 1;
+    const maxBounds = L.latLngBounds([b.south - pad, b.west - pad], [b.north + pad, b.east + pad]);
+    map = L.map('map', { preferCanvas: true, zoomControl: true, minZoom: 5, maxZoom: 15, maxBounds: maxBounds, maxBoundsViscosity: 1.0 }).setView([-34.4, 145.9], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' }).addTo(map);
+    // subtle Murray–Darling Basin coverage outline
+    L.rectangle([[b.south, b.west], [b.north, b.east]], { color: '#166534', weight: 2, opacity: 0.75, dashArray: '8 6', fillColor: '#16A34A', fillOpacity: 0.05, interactive: false }).addTo(map);
+    const renderer = L.canvas({ padding: 0.5 });
+    state.grid.forEach(c => {
+      const la = cellLat(c), ln = cellLng(c);
+      if (!isNum(la) || !isNum(ln)) return;
+      L.circleMarker([la, ln], { renderer, radius: 3, color: '#166534', weight: 0, fillColor: '#16A34A', fillOpacity: 0.55, interactive: false }).addTo(map);
+    });
+    const FS = L.Control.extend({
       options: { position: 'topleft' },
       onAdd: function () {
-        var div = L.DomUtil.create('div', 'leaflet-bar leaflet-control');
-        var a = L.DomUtil.create('a', 'fs-btn', div);
+        const c = L.DomUtil.create('div', 'leaflet-bar');
+        const a = L.DomUtil.create('a', 'fs-btn', c);
         a.href = '#'; a.title = 'Toggle full-screen map'; a.setAttribute('role', 'button'); a.setAttribute('aria-label', 'Toggle full-screen map');
         a.innerHTML = '⛶';
-        L.DomEvent.disableClickPropagation(div);
-        L.DomEvent.on(a, 'click', function (e) { L.DomEvent.preventDefault(e); toggleFullscreen(); });
-        return div;
+        L.DomEvent.disableClickPropagation(c);
+        L.DomEvent.on(a, 'click', ev => { L.DomEvent.preventDefault(ev); toggleMapFull(); });
+        return c;
       }
     });
     map.addControl(new FS());
-
-    var Legend = L.Control.extend({
-      options: { position: 'bottomleft' },
-      onAdd: function () {
-        var d = L.DomUtil.create('div', 'legend-box');
-        d.innerHTML = '<span class="legend-swatch"></span><span>Murray–Darling Basin Coverage Zone</span>';
-        return d;
+    map.on('click', e => selectLocation(e.latlng.lat, e.latlng.lng, {}));
+    setTimeout(() => map.invalidateSize(), 100);
+  }
+  function toggleMapFull() {
+    const w = $('#mapWrap');
+    w.classList.toggle('map-full');
+    document.body.classList.toggle('overflow-hidden', w.classList.contains('map-full'));
+    setTimeout(() => { map.invalidateSize(); if (state.pin) map.panTo([state.pin.lat, state.pin.lng]); }, 60);
+  }
+  function updateMapMarker(fly) {
+    if (!map || !state.pin) return;
+    const ll = [state.pin.lat, state.pin.lng];
+    if (pinMarker) { map.removeLayer(pinMarker); map.removeLayer(pinHalo); }
+    if (linkLine) { map.removeLayer(linkLine); linkLine = null; }
+    const bad = !(state.inBasin && state.cell);
+    pinHalo = L.circleMarker(ll, { radius: 18, color: bad ? '#B91C1C' : '#D97706', weight: 1, fillColor: bad ? '#EF4444' : '#F59E0B', fillOpacity: 0.25, interactive: false }).addTo(map);
+    pinMarker = L.circleMarker(ll, { radius: 9, color: '#fff', weight: 3, fillColor: bad ? '#9CA3AF' : '#EA580C', fillOpacity: 1, interactive: false }).addTo(map);
+    if (!bad) {
+      const cl = [cellLat(state.cell), cellLng(state.cell)];
+      if (isNum(cl[0]) && isNum(cl[1]) && state.distanceKm > 0.5) {
+        linkLine = L.polyline([ll, cl], { color: '#B45309', weight: 2, dashArray: '5 6', interactive: false }).addTo(map);
       }
-    });
-    map.addControl(new Legend());
-
-    markerLayer = L.layerGroup().addTo(map);
-    ringLayer = L.layerGroup().addTo(map);
-    drawGrid();
-
-    map.on('click', function (e) {
-      $('searchMsg').textContent = '';
-      setLocation(e.latlng.lat, e.latlng.lng, 'Pinned location (' + e.latlng.lat.toFixed(2) + ', ' + e.latlng.lng.toFixed(2) + ')', { reverse: true });
-    });
-  }
-
-  function toggleFullscreen(force) {
-    var w = $('mapWrap');
-    var on = typeof force === 'boolean' ? force : !w.classList.contains('map-full');
-    w.classList.toggle('map-full', on);
-    document.body.style.overflow = on ? 'hidden' : '';
-    setTimeout(function () { map.invalidateSize(); }, 60);
-  }
-
-  function convexHull(pts) {
-    pts = pts.slice().sort(function (a, b) { return a[1] === b[1] ? a[0] - b[0] : a[1] - b[1]; });
-    if (pts.length < 3) return pts;
-    function cross(o, a, b) { return (a[1] - o[1]) * (b[0] - o[0]) - (a[0] - o[0]) * (b[1] - o[1]); }
-    var lower = [], upper = [], i;
-    for (i = 0; i < pts.length; i++) {
-      while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], pts[i]) <= 0) lower.pop();
-      lower.push(pts[i]);
     }
-    for (i = pts.length - 1; i >= 0; i--) {
-      while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], pts[i]) <= 0) upper.pop();
-      upper.push(pts[i]);
-    }
-    upper.pop(); lower.pop();
-    return lower.concat(upper);
+    if (fly) map.setView(ll, Math.max(map.getZoom(), 8));
+    else map.panTo(ll);
   }
-
-  function drawGrid() {
-    if (!map) return;
-    if (gridLayer) map.removeLayer(gridLayer);
-    if (hullLayer) map.removeLayer(hullLayer);
-    gridLayer = L.layerGroup();
-    var pts = [];
-    grid.forEach(function (c) {
-      var la = cLat(c), ln = cLng(c);
-      if (!isNum(la) || !isNum(ln)) return;
-      pts.push([la, ln]);
-      if (grid.length > 1) L.circleMarker([la, ln], { radius: 2.2, weight: 0, fillColor: '#16A34A', fillOpacity: 0.55, interactive: false }).addTo(gridLayer);
-    });
-    gridLayer.addTo(map);
-    var style = { color: '#059669', weight: 2, dashArray: '7 6', fillColor: '#10B981', fillOpacity: 0.07, interactive: false };
-    if (pts.length >= 3 && grid.length > 3) {
-      var hull = convexHull(pts);
-      hullLayer = L.polygon(hull, style).addTo(map);
-    } else {
-      hullLayer = L.rectangle([[BOUNDS.south, BOUNDS.west], [BOUNDS.north, BOUNDS.east]], style).addTo(map);
-    }
-    if (hullLayer.bringToBack) hullLayer.bringToBack();
-  }
-
-  function pinIcon(out) {
-    return L.divIcon({ className: '', html: '<div class="pin' + (out ? ' out' : '') + '"></div>', iconSize: [22, 22], iconAnchor: [11, 24] });
-  }
-
-  /* ===================== LOCATION ===================== */
-  function locate(lat, lng) {
-    try {
-      if (E && E.findNearestCell) {
-        var r = E.findNearestCell(lat, lng, grid);
-        if (r) return r;
-      }
-    } catch (e) { /* fall through */ }
-    // Defensive fallback if engine is unavailable
-    var best = null, bd = Infinity;
-    grid.forEach(function (c) {
-      var d = haversine(lat, lng, cLat(c), cLng(c));
-      if (d < bd) { bd = d; best = c; }
-    });
-    return { cell: best, distanceKm: bd, inBasin: bd <= SNAP_KM };
-  }
-
-  function setLocation(lat, lng, label, opts) {
+  /* ---------- location selection ---------- */
+  function selectLocation(lat, lng, opts) {
     opts = opts || {};
-    var res = locate(lat, lng);
-    sel = {
-      lat: lat, lng: lng, label: label,
-      regionName: opts.regionName || null,
-      cell: res.cell, distanceKm: res.distanceKm, inBasin: !!res.inBasin
-    };
-    markerLayer.clearLayers();
-    ringLayer.clearLayers();
-    var visible = maxB.contains([lat, lng]);
-    if (visible) {
-      L.marker([lat, lng], { icon: pinIcon(!sel.inBasin), keyboard: false, interactive: false }).addTo(markerLayer);
-      if (sel.inBasin && res.cell) {
-        var cl = cLat(res.cell), cn = cLng(res.cell);
-        if (isNum(cl) && isNum(cn)) L.circleMarker([cl, cn], { radius: 10, color: '#D97706', weight: 2, fillColor: '#FBBF24', fillOpacity: 0.25, interactive: false }).addTo(ringLayer);
-      }
-      if (opts.pan) map.setView([lat, lng], Math.max(opts.zoom || 7, map.getZoom() < 7 ? 7 : map.getZoom()), { animate: true });
-    }
-    renderStage1Status();
-    if (opts.reverse && !opts.noGeocode) reverseGeocode(lat, lng);
+    if (!state.grid.length || !E()) return;
+    let m;
+    try { m = E().findNearestCell(lat, lng, state.grid); } catch (e) { m = null; }
+    if (!m) return;
+    const maxKm = BOUNDS().maxSnapKm || 55;
+    state.cell = m.cell || null;
+    state.distanceKm = isNum(m.distanceKm) ? m.distanceKm : (m.cell ? haversine(lat, lng, cellLat(m.cell), cellLng(m.cell)) : 0);
+    state.inBasin = !!state.cell && (typeof m.inBasin === 'boolean' ? m.inBasin : state.distanceKm <= maxKm);
+    state.pin = { lat: lat, lng: lng, quick: opts.quick || null, label: opts.label || ('Pinned point (' + lat.toFixed(2) + ', ' + lng.toFixed(2) + ')') };
+    runEngine();
+    updateMapMarker(opts.fly);
+    renderAll();
   }
-
-  function reverseGeocode(lat, lng) {
-    var token = ++geocodeToken;
-    fetch('https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&countrycodes=au&lat=' + lat + '&lon=' + lng, { headers: { 'Accept': 'application/json' } })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (d) {
-        if (!d || token !== geocodeToken || !sel || sel.lat !== lat || sel.lng !== lng) return;
-        var a = d.address || {};
-        var name = a.city || a.town || a.village || a.suburb || a.hamlet || a.county || a.municipality;
-        if (name) {
-          sel.label = name + (a.state ? ', ' + a.state : '') + ' area';
-          renderStage1Status();
-        }
-      }).catch(function () { /* label stays coordinate-based */ });
-  }
-
-  function doSearch(text) {
-    var msg = $('searchMsg');
-    if (!text) { msg.textContent = 'Type a town or 4-digit postcode first.'; return; }
-    msg.textContent = 'Searching…';
-    var query = /^\d{4}$/.test(text) ? text + ', Australia' : text;
-    fetch('https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=au&q=' + encodeURIComponent(query), { headers: { 'Accept': 'application/json' } })
-      .then(function (r) { if (!r.ok) throw new Error('search'); return r.json(); })
-      .then(function (arr) {
-        if (!arr || !arr.length) { msg.textContent = 'No match found in Australia. Try a nearby town or a postcode.'; return; }
-        var it = arr[0];
-        var lat = parseFloat(it.lat), lng = parseFloat(it.lon);
-        var parts = String(it.display_name || text).split(',').map(function (s) { return s.trim(); });
-        var label = parts.slice(0, 2).join(', ');
-        msg.textContent = 'Found: ' + label;
-        setLocation(lat, lng, label, { pan: true, zoom: 9 });
-      })
-      .catch(function () { msg.textContent = 'Search service is unavailable right now. You can still tap the map or use a Quick-Jump button.'; });
-  }
-
-  function doGPS() {
-    var msg = $('searchMsg');
-    if (!navigator.geolocation) { msg.textContent = 'GPS is not available in this browser.'; return; }
-    msg.textContent = 'Finding your location…';
-    navigator.geolocation.getCurrentPosition(function (p) {
-      msg.textContent = 'Using your GPS location.';
-      setLocation(p.coords.latitude, p.coords.longitude, 'Your GPS location', { pan: true, zoom: 9, reverse: true });
-    }, function () {
-      msg.textContent = 'Could not get your location. Check browser permissions, or tap the map instead.';
-    }, { enableHighAccuracy: false, timeout: 12000 });
-  }
-
-  function nearestQuick(lat, lng) {
-    var best = null, bd = Infinity;
-    QUICK.forEach(function (r) {
-      var d = haversine(lat, lng, r.lat, r.lng);
-      if (d < bd) { bd = d; best = r; }
-    });
-    return best ? { region: best, km: bd } : null;
-  }
-
-  function oobText() {
-    return 'This location is outside the Murray–Darling Basin dataset (' + Math.round(sel.distanceKm) + ' km from nearest verified cell). Please select a location inside the highlighted Basin boundary.';
-  }
-
-  /* ===== soil summary helpers ===== */
-  function soilNumbers(cell) {
-    var ph = findNum(cell, [/^(ph|soil_?ph)$/i, /(^|_)ph(h2o|_|$)/i, /^ph/i]);
-    if (ph == null && E && sel && cell) {
-      var key = cLat(cell) + ',' + cLng(cell);
-      if (phCache[key] == null) {
-        try {
-          var r = E.evaluateFarm(cell, { climate: 'normal', horizonYears: 2, baselineCrops: ['Wheat', 'Wheat'], priorities: { water: 50, soil: 50, erosion: 50, profit: 50 }, labOverride: { enabled: false, pH: 0, deepN: 0 } });
-          phCache[key] = r && isNum(r.effectivePH) ? r.effectivePH : -1;
-        } catch (e) { phCache[key] = -1; }
-      }
-      if (phCache[key] > 0) ph = phCache[key];
-    }
-    var clay = findNum(cell, [/^clay(_?pct|_?percent)?$/i, /clay/i]);
-    if (clay != null && clay <= 1) clay = clay * 100;
-    return { ph: ph, clay: clay };
-  }
-  function soilSentence(cell) {
-    var s = soilNumbers(cell);
-    return 'Soil pH (' + (s.ph != null ? s.ph.toFixed(1) : 'n/a') + ' CaCl₂) and clay content (' + (s.clay != null ? Math.round(s.clay) : 'n/a') + '%)';
-  }
-
-  /* ===================== STAGE 1 RENDER ===================== */
-  function renderStage1Status() {
-    if (!sel) return;
-    // region name + soil desc
-    $('regionNameTxt').textContent = sel.label;
-    var soil = '';
-    if (sel.inBasin) {
-      if (sel.regionName) {
-        var qr = findQuickExact(sel.regionName);
-        soil = qr ? qr.soilDesc : '';
-      }
-      if (!soil) {
-        var nq = nearestQuick(sel.lat, sel.lng);
-        if (nq && nq.km < 200) soil = 'Nearest reference region (' + nq.region.name + '): ' + nq.region.soilDesc;
-      }
-      if (!soil) soil = soilSentence(sel.cell) + '.';
-    } else {
-      soil = 'Outside the Murray–Darling Basin dataset — no soil description available.';
-    }
-    $('regionSoil').textContent = soil;
-
-    $('cellInfo').textContent = sel.cell ? '· nearest verified cell ' + Number(cLat(sel.cell)).toFixed(2) + '°, ' + Number(cLng(sel.cell)).toFixed(2) + '° (' + Math.round(sel.distanceKm) + ' km away)' : '';
-
-    var b = $('oobBanner');
-    if (!sel.inBasin) { b.textContent = '⚠️ ' + oobText(); b.classList.remove('hidden'); }
-    else b.classList.add('hidden');
-
-    $('mapInfo').innerHTML = sel.inBasin
-      ? '<strong class="text-[#14532D]">' + esc(sel.label) + '</strong> <span class="text-stone-600">· ' + Math.round(sel.distanceKm) + ' km from nearest verified cell</span>'
-      : '<strong class="text-amber-800">⚠️ ' + esc(oobText()) + '</strong>';
-
-    Array.prototype.forEach.call(document.querySelectorAll('#quickJump .quick'), function (b2) {
-      var on = sel.regionName && b2.dataset.name === sel.regionName && sel.inBasin;
-      b2.style.cssText = on ? 'background:#166534;color:#fff' : '';
-    });
-    renderSummary();
-  }
-
-  function findQuickExact(name) {
-    for (var i = 0; i < QUICK.length; i++) if (QUICK[i].name === name) return QUICK[i];
-    return null;
-  }
-
-  function renderSummary() {
-    if (!sel) return;
-    var routine = state.baseline.slice(0, state.horizon).join(' → ');
-    var row = function (k, v) { return '<div class="py-2.5 flex flex-col sm:flex-row sm:items-start sm:gap-4"><dt class="sm:w-40 shrink-0 text-xs font-extrabold uppercase tracking-wide text-stone-500">' + k + '</dt><dd class="font-semibold text-stone-800">' + v + '</dd></div>'; };
-    var regionHtml = sel.inBasin
-      ? esc(sel.label)
-      : '<span class="inline-block rounded-lg bg-amber-100 border border-amber-500 text-amber-900 px-2 py-1 font-bold">⚠️ Outside the Murray–Darling Basin (' + Math.round(sel.distanceKm) + ' km from nearest verified cell)</span>';
-    $('summaryList').innerHTML =
-      row('Region', regionHtml) +
-      row('Soil', sel.inBasin ? esc(soilSentence(sel.cell)) : '<span class="text-stone-400">Pick a location inside the Basin</span>') +
-      row('Current routine', esc(routine)) +
-      row('Planning horizon', state.horizon + '-Year') +
-      row('Top priority', esc(topPriorityLabel())) +
-      row('Season outlook', esc(climateLabel(state.climate)));
-
-    var btn = $('generateBtn'), hint = $('generateHint');
-    var blocked = !sel.inBasin || !sel.cell || !E;
-    btn.disabled = blocked;
-    btn.setAttribute('aria-disabled', blocked);
-    if (blocked) {
-      hint.textContent = !E ? 'The AcreArc engine file is missing, so plans cannot be generated.' : 'Select a location inside the highlighted Basin boundary to enable the plan.';
-      hint.classList.remove('hidden');
-    } else hint.classList.add('hidden');
-  }
-
-  function resetAll() {
-    state.horizon = 3;
-    state.baseline = ['Wheat', 'Wheat', 'Wheat'];
-    state.priorities = { water: 50, soil: 60, erosion: 40, profit: 70 };
-    state.climate = 'normal';
-    state.lab = { use: false, pH: '', deepN: '' };
-    state.idx = 0;
-    PRIORITY_DEFS.forEach(function (p) { $('sl-' + p.key).value = state.priorities[p.key]; $('slv-' + p.key).textContent = state.priorities[p.key]; });
-    [0, 1, 2].forEach(function (i) { $('base' + i).value = 'Wheat'; });
-    $('labPH').value = ''; $('labN').value = ''; $('labUse').checked = false; $('labMsg').textContent = '';
-    $('searchInput').value = ''; $('searchMsg').textContent = '';
-    syncHorizon(); renderClimate();
-    var qj = findQuick('Griffith');
-    setLocation(qj ? qj.lat : GRIFFITH.lat, qj ? qj.lng : GRIFFITH.lng, qj ? qj.name : GRIFFITH.name, { regionName: qj ? qj.name : GRIFFITH.name, pan: true, zoom: 7 });
-  }
-
-  /* ===================== EVALUATION ===================== */
-  function labOverride() {
-    var pH = parseFloat(state.lab.pH), n = parseFloat(state.lab.deepN);
-    var ok = state.lab.use && isFinite(pH) && isFinite(n) && pH >= 3.5 && pH <= 9.5 && n >= 0 && n <= 600;
-    return { enabled: !!ok, pH: isFinite(pH) ? pH : 0, deepN: isFinite(n) ? n : 0 };
-  }
-
-  function runEvaluate() {
-    if (!E || !sel || !sel.cell) return false;
+  function selectQuick(r, fly) { selectLocation(r.lat, r.lng, { label: r.name, quick: r, fly: fly !== false }); }
+  async function doSearch(q) {
+    q = q.trim();
+    const msg = $('#searchMsg');
+    if (!q) { msg.textContent = 'Type a town or 4-digit postcode first.'; return; }
+    msg.textContent = 'Searching OpenStreetMap…';
+    let url = 'https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&countrycodes=au&addressdetails=0&';
+    url += /^\d{4}$/.test(q) ? ('postalcode=' + encodeURIComponent(q) + '&country=Australia') : ('q=' + encodeURIComponent(/australia/i.test(q) ? q : q + ', Australia'));
     try {
-      var r = E.evaluateFarm(sel.cell, {
-        climate: state.climate,
-        horizonYears: state.horizon,
-        baselineCrops: state.baseline.slice(0, state.horizon),
-        priorities: { water: state.priorities.water, soil: state.priorities.soil, erosion: state.priorities.erosion, profit: state.priorities.profit },
-        labOverride: labOverride()
-      });
-      if (!r || !r.strategies || !r.strategies.length) throw new Error('No strategies returned');
-      result = r;
-      if (state.idx >= r.strategies.length) state.idx = 0;
-      return true;
-    } catch (err) {
-      var er = $('engineError');
-      er.textContent = 'The rotation engine could not evaluate this farm setup: ' + (err && err.message ? err.message : 'unknown error') + '. Please adjust your choices or try a different location.';
-      er.classList.remove('hidden');
-      return false;
+      const res = await fetch(url, { headers: { 'Accept': 'application/json' } });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const j = await res.json();
+      if (!j.length) { msg.textContent = 'No match found for "' + q + '". Try another town or postcode.'; return; }
+      const hit = j[0];
+      const label = String(hit.display_name || q).split(',').slice(0, 2).join(',').trim();
+      selectLocation(parseFloat(hit.lat), parseFloat(hit.lon), { label: label, fly: true });
+      msg.textContent = 'Found: ' + label;
+    } catch (e) {
+      msg.textContent = 'Search unavailable right now (' + e.message + '). You can still click the map.';
     }
   }
-
-  function generate() {
-    if (!sel || !sel.inBasin) return;
-    $('engineError').classList.add('hidden');
-    state.idx = 0;
-    if (runEvaluate()) { showStage(2); renderStage2(); }
+  function useGps() {
+    const msg = $('#searchMsg');
+    if (!navigator.geolocation) { msg.textContent = 'GPS is not supported in this browser. Click the map instead.'; return; }
+    msg.textContent = 'Getting your location…';
+    navigator.geolocation.getCurrentPosition(
+      pos => { selectLocation(pos.coords.latitude, pos.coords.longitude, { label: 'My GPS location', fly: true }); msg.textContent = 'Using your GPS location (±' + Math.round(pos.coords.accuracy) + ' m).'; },
+      err => { msg.textContent = 'Could not get GPS (' + err.message + '). Click the map or search instead.'; },
+      { enableHighAccuracy: true, timeout: 12000, maximumAge: 60000 }
+    );
   }
-
-  function showStage(n) {
-    state.stage = n;
-    $('stage1').classList.toggle('hidden', n !== 1);
-    $('stage2').classList.toggle('hidden', n !== 2);
-    if (n === 1) setTimeout(function () { map.invalidateSize(); }, 50);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  /* ---------- stage 2 rendering ---------- */
+  const cropsOf = s => (Array.isArray(s.crops) && s.crops.length) ? s.crops : (s.yearlyBreakdown || []).map(y => y.crop);
+  const cropFlow = s => {
+    const yb = (s.yearlyBreakdown && s.yearlyBreakdown.length) ? s.yearlyBreakdown.map(y => y.crop) : cropsOf(s);
+    return '<div class="flex flex-wrap items-center gap-1.5">' + yb.map((c, i) =>
+      `<span class="inline-flex items-center rounded-lg bg-[#FEF3C7] border border-[#F5D78A] text-[#78350F] text-sm font-bold px-2.5 py-1"><span class="text-[10px] mr-1.5 text-[#B45309]">Y${i + 1}</span>${esc(c)}</span>` + (i < yb.length - 1 ? '<span class="text-[#166534] font-bold">→</span>' : '')
+    ).join('') + '</div>';
+  };
+  const rankTag = s => s.rank === 1 ? '#1 Top Pick' : '#' + s.rank;
+  function renderChips() {
+    const r = state.result;
+    $('#s2Chips').innerHTML = `
+      <span class="px-3 py-1.5 rounded-full bg-[#ECFDF3] border border-[#BBE5C8] font-bold text-[#14532D]"><span class="tipped" tabindex="0" data-tip="${esc(soilDescription())}">📍 ${esc(state.pin.label)}</span></span>
+      <span class="px-3 py-1.5 rounded-full bg-[#F7F5EE] border border-[#E4E0D0] font-semibold text-stone-700">${esc(climateLabel())}</span>
+      <span class="px-3 py-1.5 rounded-full bg-[#F7F5EE] border border-[#E4E0D0] font-semibold text-stone-700">Top goal: ${esc(topPriority())}</span>
+      <span class="px-3 py-1.5 rounded-full bg-[#F7F5EE] border border-[#E4E0D0] font-semibold text-stone-700">Routine: ${esc(baselineText())}</span>
+      <span class="px-3 py-1.5 rounded-full text-xs font-extrabold border ${r && r.isLabOverride ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-sky-100 text-sky-900 border-sky-300'}">${soilSourceName()}</span>`;
   }
-
-  /* ===================== STAGE 2 RENDER ===================== */
-  function labBadgeHtml(isLab) {
-    return isLab
-      ? '<span class="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-extrabold bg-[#14532D] text-white">🧪 Farmer Lab Soil Test</span>'
-      : '<span class="inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-extrabold bg-sky-100 text-sky-900 border border-sky-300">🛰️ Regional Satellite Estimate</span>';
+  function renderRotationRow() {
+    const r = state.result;
+    $('#rotationRow').innerHTML = r.strategies.slice(0, 3).map((s, i) => {
+      const sm = state.summaries[i];
+      const body = state.view === 'field'
+        ? `<div class="mt-3 flex items-center justify-between gap-2"><span class="text-xs font-bold text-stone-500 uppercase">Overall</span>${sm ? badge(sm.overallRating) : ''}</div>`
+        : `<div class="mt-3 grid grid-cols-3 gap-2 text-center">
+             <div class="rounded-lg bg-[#F7F5EE] p-1.5"><div class="text-base font-extrabold text-[#14532D]">${fmt(s.avgYield, 2)}</div><div class="text-[10px] text-stone-500 font-semibold">t/ha/yr</div></div>
+             <div class="rounded-lg bg-[#F7F5EE] p-1.5"><div class="text-base font-extrabold text-[#14532D]">${money(s.avgGrossValue)}</div><div class="text-[10px] text-stone-500 font-semibold">$/ha/yr</div></div>
+             <div class="rounded-lg bg-[#F7F5EE] p-1.5"><div class="text-base font-extrabold ${s.deltaYield >= 0 ? 'text-green-700' : 'text-red-700'}">${signed(s.deltaYield, 2)}</div><div class="text-[10px] text-stone-500 font-semibold">vs routine</div></div>
+           </div>`;
+      return `<button type="button" class="rot-card" data-rot="${i}" aria-pressed="${state.selected === i}">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-xs font-extrabold px-2.5 py-1 rounded-full ${s.rank === 1 ? 'bg-[#D97706] text-white' : 'bg-[#E7E5E4] text-stone-800'}">${esc(rankTag(s))}</span>
+          ${state.selected === i ? '<span class="text-xs font-bold text-[#166534]">✔ Selected</span>' : '<span class="text-xs text-stone-400">Tap to view</span>'}
+        </div>
+        <div class="mt-2 flex items-start justify-between gap-2">
+          <div class="min-w-0 font-extrabold text-[#14532D] text-lg leading-snug">${esc(s.title)}</div>
+          ${scorePill(s)}
+        </div>
+        <div class="mt-1 flex flex-wrap items-center gap-2">${seasonBadge(s)}<span class="text-sm text-stone-600 leading-snug">${esc(s.subtitle)}</span></div>
+        <div class="mt-2 text-sm font-semibold text-[#78350F]">${cropsOf(s).map(esc).join(' → ')}</div>
+        ${body}
+      </button>`;
+    }).join('');
   }
-
+  function soilMatchBox(s) {
+    const status = String(s.soilMatchStatus || '');
+    const bad = /warn|caution|poor|mismatch|marginal|amber|limit|risk|avoid|low|not|fair|moderate/i.test(status);
+    const note = String(s.soilMatchNote || '');
+    return `<div class="rounded-xl border-2 p-3 ${bad ? 'bg-amber-50 border-amber-300 text-amber-950' : 'bg-green-50 border-green-400 text-green-950'}">
+      <div class="font-extrabold text-sm">${bad ? '⚠️' : '✅'} Soil Match: ${esc(status || (bad ? 'Check soil' : 'Good fit'))}</div>
+      ${note ? `<p class="text-sm mt-0.5 leading-snug">${esc(note)}</p>` : ''}
+    </div>`;
+  }
+  function fieldRow(icon, label, rating, text, highlight) {
+    return `<div class="rounded-xl border ${highlight ? 'border-[#166534] bg-[#F0FDF4]' : 'border-stone-200 bg-[#FBFAF5]'} p-3">
+      <div class="flex items-center justify-between gap-2 flex-wrap">
+        <div class="font-bold text-[#14532D]">${icon} ${label}</div>${rating ? badge(rating) : ''}
+      </div>
+      <p class="mt-1.5 text-[15px] text-stone-700 leading-snug">${esc(text || '')}</p>
+    </div>`;
+  }
+  function tile(title, tip, srcKey, inner, cls) {
+    return `<div class="rounded-xl border border-stone-200 bg-[#FBFAF5] p-3 ${cls || ''}">
+      <div class="text-xs font-bold uppercase tracking-wide text-stone-500">${title}${help(tip)}${srcKey ? src(srcKey) : ''}</div>
+      <div class="mt-1">${inner}</div>
+    </div>`;
+  }
+  function fitBars(fb) {
+    const rows = [['profit', 'Profit', '💰'], ['water', 'Water', '💧'], ['soil', 'Soil', '🌱'], ['erosion', 'Erosion', '🛡️']];
+    return rows.map(r => {
+      const v = to100(fb ? fb[r[0]] : 0);
+      return `<div class="flex items-center gap-2 text-sm"><span class="w-24 flex-none font-semibold text-stone-700">${r[2]} ${r[1]}</span>
+        <div class="flex-1 h-3 rounded-full bg-stone-200 overflow-hidden"><div class="h-full rounded-full bg-gradient-to-r from-[#D97706] to-[#166534]" style="width:${v}%"></div></div>
+        <span class="w-9 text-right font-bold text-[#14532D]">${Math.round(v)}</span></div>`;
+    }).join('');
+  }
+  function strategyCard(s, sm, isBase) {
+    const n = hz();
+    const header = isBase
+      ? `<div class="text-xs font-extrabold uppercase tracking-wide text-[#B45309]">Your Current Routine (Baseline)</div>`
+      : `<div class="flex items-center gap-2 flex-wrap"><span class="text-xs font-extrabold uppercase tracking-wide text-[#166534]">Selected AI Rotation</span><span class="text-xs font-extrabold px-2.5 py-0.5 rounded-full ${s.rank === 1 ? 'bg-[#D97706] text-white' : 'bg-[#E7E5E4] text-stone-800'}">${esc(rankTag(s))}</span>${seasonBadge(s)}</div>`;
+    const titleRow = isBase
+      ? `<h3 class="text-xl font-extrabold text-[#14532D] leading-snug mt-0.5">${esc(s.title)}</h3>`
+      : `<div class="mt-1 flex items-start justify-between gap-2"><h3 class="text-xl font-extrabold text-[#14532D] leading-snug min-w-0">${esc(s.title)}</h3>${scorePill(s)}</div>`;
+    let body = '';
+    if (state.view === 'field') {
+      if (sm) {
+        body = `<div class="flex items-center justify-between gap-2 rounded-xl bg-[#14532D] text-white px-3.5 py-2.5">
+            <span class="font-extrabold">Overall</span>${badge(sm.overallRating)}</div>
+          ${fieldRow('🌾', 'Harvest Outlook', sm.harvestRating, sm.harvestText)}
+          ${fieldRow('🌦️', 'Drought &amp; Weather Reliability', sm.droughtRating, sm.droughtText)}
+          ${fieldRow('🧪', 'Soil &amp; Nitrogen Health', sm.soilRating, sm.soilText)}
+          ${isBase ? '' : fieldRow('🚜', 'Next Step on Farm', null, sm.actionTakeaway, true)}`;
+      } else {
+        body = '<div class="rounded-xl bg-stone-100 p-3 text-sm text-stone-600">Plain-English summary is not available for this rotation.</div>';
+      }
+      body += soilMatchBox(s);
+    } else {
+      const conf = to100(s.confidence), filled = Math.round(conf);
+      let trees = '';
+      for (let i = 0; i < 100; i++) trees += `<span class="tree ${i < filled ? 'on' : ''}"></span>`;
+      const yrs = (s.yearlyBreakdown || []).map((y, i) => `<tr class="border-t border-stone-200"><td class="py-1 pr-2 font-semibold text-stone-600">Year ${i + 1}</td><td class="py-1 pr-2">${esc(y.crop)}</td><td class="py-1 text-right font-bold text-[#14532D]">${fmt(y.yield, 2)}</td></tr>`).join('');
+      const lo = s.yieldRange ? s.yieldRange[0] : null, hi = s.yieldRange ? s.yieldRange[1] : null;
+      const vPct = isNum(s.valueDeltaPct) ? s.valueDeltaPct : null;
+      body = `<div class="grid sm:grid-cols-2 gap-2.5">
+          ${tile('Expected Harvest', 'How many tonnes of grain you can expect per hectare each year, averaged across the ' + n + '-year rotation.', 'yield',
+            `<div class="text-3xl font-extrabold text-[#14532D]">${fmt(s.avgYield, 2)} <span class="text-sm font-semibold text-stone-600">t/ha/yr</span></div><div class="text-xs text-stone-600">Likely range ${fmt(lo, 2)} – ${fmt(hi, 2)} t/ha</div>`)}
+          ${tile('Expected Gross Value', 'Estimated gross income per hectare per year (yield × typical grain price), averaged across the rotation. The percentage compares it with your current routine.', 'yield',
+            `<div class="text-3xl font-extrabold text-[#14532D]">${money(s.avgGrossValue)} <span class="text-sm font-semibold text-stone-600">$/ha/yr</span></div>` +
+            (isBase ? `<div class="text-xs text-stone-600">Reference for comparison</div>`
+              : `<div class="text-xs font-bold ${vPct != null && vPct >= 0 ? 'text-green-700' : 'text-red-700'}">${vPct != null ? signed(vPct, 1) + '% vs your routine' : '—'}${isNum(s.valueDelta) ? ' <span class="font-semibold text-stone-600">(' + signedMoney(s.valueDelta) + '/ha/yr)</span>' : ''}</div>`)}`)}
+          ${tile('Extra Harvest Gain', 'How much more (or less) grain per hectare this rotation gives compared with your current routine.', 'yield',
+            isBase ? `<div class="text-xl font-extrabold text-stone-500">Reference</div><div class="text-xs text-stone-600">Other rotations are measured against this.</div>`
+              : `<div class="text-3xl font-extrabold ${s.deltaYield >= 0 ? 'text-green-700' : 'text-red-700'}">${signed(s.deltaYield, 2)} <span class="text-sm font-semibold text-stone-600">t/ha</span></div><div class="text-xs text-stone-600">${isNum(s.deltaPct) ? signed(s.deltaPct, 1) + '% vs your routine' : ''}</div>`, 'sm:col-span-2')}
+        </div>
+        ${tile('Forecast Confidence', 'How sure the AI is. Each bar is one of 100 decision trees; more filled bars means the trees agree more.', 'confidence',
+          `<div class="flex items-baseline gap-2"><span class="text-2xl font-extrabold text-[#14532D]">${Math.round(conf)}%</span><span class="text-xs text-stone-500">100-tree forest agreement</span></div><div class="flex gap-px mt-1.5" aria-label="${Math.round(conf)} of 100 trees">${trees}</div>`)}
+        ${tile(n + '-Year Nitrogen Balance', 'Soil nitrogen at the start and end of the rotation. A positive net balance means your soil is gaining nitrogen, helped by legume crops.', 'nitrogen',
+          `<div class="flex flex-wrap items-baseline gap-x-3 gap-y-1"><span class="text-2xl font-extrabold ${s.nBalance >= 0 ? 'text-green-700' : 'text-red-700'}">${signed(s.nBalance, 0)} <span class="text-sm font-semibold text-stone-600">kg N/ha</span></span>
+           ${isBase ? '<span class="text-xs font-bold text-stone-500">Reference</span>' : `<span class="text-sm font-extrabold ${isNum(s.nDeltaVsBaseline) && s.nDeltaVsBaseline >= 0 ? 'text-green-700' : 'text-red-700'}">${signed(s.nDeltaVsBaseline, 0)} kg N/ha vs. your routine</span>`}
+           </div>
+           <div class="text-xs text-stone-600 mt-0.5">${fmt(s.startN, 0)} → ${fmt(s.endN, 0)} kg N/ha · legume credit ${fmt(s.legumeCredit, 0)} kg N/ha</div>`)}
+        ${tile('Fit to Your Priorities', 'How well this rotation scores on each of your four goals (0–100).', 'fit', `<div class="space-y-1.5">${fitBars(s.fitBars)}</div>`)}
+        <div class="rounded-xl border border-stone-200 p-3">
+          <div class="text-xs font-bold uppercase tracking-wide text-stone-500 mb-1">Yearly breakdown (t/ha)</div>
+          <table class="w-full text-sm"><tbody>${yrs}</tbody></table>
+        </div>
+        ${soilMatchBox(s)}`;
+    }
+    return `<div class="card p-4 sm:p-5 space-y-3 ${isBase ? '' : 'border-2 !border-[#166534]'}">
+      <div>${header}
+        ${titleRow}
+        <p class="text-sm text-stone-600">${esc(s.subtitle)}</p></div>
+      ${cropFlow(s)}
+      ${body}
+    </div>`;
+  }
+  function renderCompare() {
+    const r = state.result, sel = r.strategies[state.selected];
+    $('#compareRow').innerHTML = strategyCard(r.baseline, state.baseSummary, true) + strategyCard(sel, state.summaries[state.selected], false);
+  }
+  /* ----- drawers ----- */
+  function renderScore() {
+    const s = state.result.strategies[state.selected];
+    const sb = s.scoreBreakdown || {};
+    const prio = isNum(sb.priorityPoints) ? sb.priorityPoints : sb.sustainabilityPoints;
+    const rows = [
+      { label: 'Random Forest Yield & Tree Confidence', share: '50%', val: sb.rfPoints, max: 50, color: 'bg-[#166534]' },
+      { label: 'Soil pH / Clay Fit', share: '20%', val: sb.soilPoints, max: 20, color: 'bg-[#D97706]' },
+      { label: 'Priority-Weighted Water & Nitrogen Sustainability', share: '30%', val: prio, max: 30, color: 'bg-[#B45309]' }
+    ];
+    const total = isNum(s.matchScore) ? s.matchScore : rows.reduce((a, b) => a + (isNum(b.val) ? b.val : 0), 0);
+    $('#bodyScore').innerHTML = `
+      <p class="text-sm text-stone-700 mb-3">Active rotation: <b class="text-[#14532D]">${esc(s.title)}</b> (${esc(rankTag(s))})</p>
+      <div class="flex h-7 rounded-lg overflow-hidden border border-stone-300 mb-1" aria-label="Score breakdown bar">
+        ${rows.map(x => `<div class="${x.color} h-full" style="width:${isNum(x.val) ? Math.max(0, x.val) : 0}%" title="${esc(x.label)}: ${fmt(x.val, 1)}"></div>`).join('')}
+        <div class="flex-1 bg-stone-200"></div>
+      </div>
+      <div class="text-right text-sm font-extrabold text-[#14532D] mb-3">Total viability score: ${fmt(total, 0)} / 100</div>
+      <div class="space-y-3">
+        ${rows.map(x => `<div>
+          <div class="flex items-center justify-between text-sm gap-2"><span class="font-bold text-stone-800">${x.share} · ${x.label}</span><span class="font-extrabold text-[#14532D] flex-none">${fmt(x.val, 1)} / ${x.max}</span></div>
+          <div class="h-3 rounded-full bg-stone-200 overflow-hidden mt-1"><div class="h-full ${x.color}" style="width:${isNum(x.val) ? Math.min(100, x.val / x.max * 100) : 0}%"></div></div>
+        </div>`).join('')}
+      </div>
+      <div class="mt-4 rounded-xl bg-[#F7F5EE] border border-[#E4E0D0] p-3 text-sm text-stone-700 leading-relaxed">
+        <b class="text-[#14532D]">Transparency note:</b> the AI's training yields were calibrated from GRDC / NSW DPI agronomic equations across 784 real satellite and soil coordinates. They are model-based estimates, not measured paddock trial results, so treat the score as a guide for comparing rotations rather than a guarantee.
+      </div>`;
+  }
+  function alertKind(l) {
+    const s = String(l == null ? '' : l).toLowerCase();
+    if (/high|red|severe|critical|danger|extreme|frost|heat/.test(s)) return 'high';
+    if (/med|amber|warn|caution|moderate|watch|yellow/.test(s)) return 'med';
+    if (/low|green|ok|none|safe|good|clear|normal/.test(s)) return 'ok';
+    return 'none';
+  }
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function renderCalendar() {
+    const s = state.result.strategies[state.selected];
+    const n = hz();
+    let cal = null;
+    try { cal = E().generateCalendar(s, state.cell, state.engineClimate); } catch (e) { cal = null; }
+    const head = `<div class="flex flex-wrap items-center gap-1 mb-2 text-sm text-stone-700">Autumn topsoil wetness (GWETTOP) drives the sowing-window alerts below.${src('calendar')}</div>`;
+    if (!Array.isArray(cal) || !cal.length) {
+      $('#bodyCalendar').innerHTML = head + '<div class="rounded-xl bg-stone-100 p-3 text-sm text-stone-600">Calendar is not available for this rotation.</div>';
+      return;
+    }
+    const zero = cal.some(e => e.month === 0);
+    const mName = m => {
+      if (isNum(m)) return MONTHS[((zero ? m : m - 1) % 12 + 12) % 12];
+      const i = MONTHS.findIndex(x => String(m).toLowerCase().startsWith(x.toLowerCase()));
+      return i >= 0 ? MONTHS[i] : String(m);
+    };
+    const rowsArr = [];
+    for (let i = 0; i < cal.length; i += 12) rowsArr.push(cal.slice(i, i + 12));
+    const grid = rowsArr.map((row, ri) => {
+      const yr = row[0] && isNum(row[0].year) && row[0].year > 1900 ? ' · ' + row[0].year : '';
+      return `<div class="mb-2"><div class="text-xs font-extrabold text-[#B45309] mb-1">Year ${ri + 1}${yr}</div>
+        <div class="grid grid-cols-12 gap-1" style="min-width:820px">${row.map(e => {
+          const k = alertKind(e.alertLevel);
+          const tip = mName(e.month) + (isNum(e.year) ? ' ' + e.year : '') + ' — ' + (e.crop || '') + (e.phase ? ' (' + e.phase + ')' : '') + '\nAlert: ' + (e.alertLevel || 'none') + (e.note ? '\n' + e.note : '');
+          return `<div class="cal-cell cal-${k}" tabindex="0" data-tip="${esc(tip)}">
+            <div class="text-[10px] font-extrabold uppercase">${esc(mName(e.month))}</div>
+            <div class="text-[11px] font-bold leading-tight break-words">${esc(e.crop || '—')}</div>
+            <div class="text-[9px] opacity-80 leading-tight">${esc(e.phase || '')}</div></div>`;
+        }).join('')}</div></div>`;
+    }).join('');
+    const alerts = cal.filter(e => { const k = alertKind(e.alertLevel); return (k === 'high' || k === 'med') && e.note; }).slice(0, 8);
+    $('#bodyCalendar').innerHTML = head + `
+      <div class="flex flex-wrap gap-2 text-xs font-bold mb-2">
+        <span class="px-2 py-1 rounded cal-ok border">Clear</span><span class="px-2 py-1 rounded cal-med border">Watch</span><span class="px-2 py-1 rounded cal-high border">Act / risk</span><span class="px-2 py-1 rounded cal-none border">No alert</span>
+        <span class="text-stone-500 font-medium self-center">${cal.length} months (${n} years) · Hover or tap a month for details.</span>
+      </div>
+      <div class="overflow-x-auto pb-1">${grid}</div>
+      <div class="mt-3">
+        <div class="text-sm font-extrabold text-[#14532D] mb-1">Key alerts</div>
+        ${alerts.length ? `<ul class="space-y-1.5 text-sm">${alerts.map(e => `<li class="flex gap-2 rounded-lg p-2 ${alertKind(e.alertLevel) === 'high' ? 'bg-red-50 text-red-900' : 'bg-amber-50 text-amber-900'}"><span class="font-extrabold flex-none">${esc(mName(e.month))}${isNum(e.year) && e.year > 1900 ? ' ' + e.year : ''}</span><span>${esc(e.note)}</span></li>`).join('')}</ul>`
+          : '<p class="text-sm text-stone-600">No watch or risk alerts for this rotation under the selected season outlook.</p>'}
+      </div>`;
+  }
+  function humanize(k) {
+    let base = k, unit = '';
+    const sfx = [[/_mm_day$/i, 'mm/day'], [/_mj_m2_day$/i, 'MJ/m²/day'], [/_mm$/i, 'mm'], [/_c$/i, '°C'], [/_pct$/i, '%'], [/_t_ha$/i, 't/ha'], [/_kg_ha$/i, 'kg/ha'], [/_g_kg$/i, 'g/kg']];
+    for (const x of sfx) { if (x[0].test(base)) { unit = x[1]; base = base.replace(x[0], ''); break; } }
+    let label = base.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    label = label.replace(/\b(Ndvi|Esi|Et|Soc|Cec|Gwettop|Gwetroot|Gwetprof|Modis|Nasa|Rh2m|T2m|Ws2m)\b/g, m => m.toUpperCase())
+      .replace(/\bPh\b/g, 'pH').replace(/\bCacl2\b/g, '(CaCl₂)').replace(/\bPh Cacl2\b/g, 'pH (CaCl₂)');
+    return { label: label, unit: unit };
+  }
+  function renderReadings() {
+    const c = state.cell;
+    const groups = [
+      { name: 'NASA POWER — climate', key: 'climate', re: /rain|precip|prec|temp|t2m|tmax|tmin|solar|radiation|allsky|gwet|humid|rh2m|wind|ws2m|vpd|pet|frost|heat/i, rows: [] },
+      { name: 'MODIS — vegetation greenness (NDVI)', key: 'veg', re: /ndvi|evi|modis|lai|fpar/i, rows: [] },
+      { name: 'ECOSTRESS — evapotranspiration & stress (ET / ESI)', key: 'veg', re: /(^|_)et(_|$)|esi|eco|evapo|lst/i, rows: [] },
+      { name: 'ISRIC SoilGrids 2.0 — soil', key: 'soil', re: /(^|_)ph(_|$)|clay|sand|silt|soc|cec|bdod|ocd|organic|bulk|nitrogen|deep_?n|soil/i, rows: [] },
+      { name: 'Other grid attributes', key: null, re: /./, rows: [] }
+    ];
+    const order = [3, 1, 2, 0, 4]; // test soil first so 'soil_*' keys land correctly, then vegetation, ET, climate, other
+    const skip = /^(lat|lng|lon|latitude|longitude|id|gid|cell_?id|grid_?id|name)$/i;
+    Object.keys(c).forEach(k => {
+      const v = c[k];
+      if (skip.test(k) || !isNum(v)) return;
+      for (const gi of order) { if (groups[gi].re.test(k)) { groups[gi].rows.push(k); break; } }
+    });
+    const val = v => Number.isInteger(v) ? String(v) : (Math.abs(v) < 1 ? v.toFixed(3) : v.toFixed(2));
+    const html = groups.filter(g => g.rows.length).map(g => `
+      <tbody>
+        <tr class="bg-[#E8F3EA]"><th colspan="2" class="text-left px-3 py-1.5 text-xs font-extrabold text-[#14532D] uppercase tracking-wide">${g.name}</th></tr>
+        ${g.rows.map(k => { const h = humanize(k); return `<tr class="border-t border-stone-200"><td class="px-3 py-1.5 text-stone-700">${esc(h.label)}</td><td class="px-3 py-1.5 text-right font-bold text-[#14532D]">${val(c[k])} <span class="text-xs font-semibold text-stone-500">${esc(h.unit)}</span></td></tr>`; }).join('')}
+      </tbody>`).join('');
+    const ph = state.result ? state.result.effectivePH : null;
+    $('#bodyReadings').innerHTML = `
+      <div class="flex flex-wrap items-center gap-1 mb-2 text-sm text-stone-700">Active grid cell <b class="text-[#14532D]">${esc(cellId(c))}</b> (${fmt(cellLat(c), 3)}, ${fmt(cellLng(c), 3)}).${src('readings')}</div>
+      <div class="overflow-x-auto rounded-xl border border-stone-200 bg-white">
+        <table class="w-full text-sm">${html || '<tbody><tr><td class="p-3 text-stone-600">No numeric readings found for this cell.</td></tr></tbody>'}</table>
+      </div>
+      <p class="text-xs text-stone-500 mt-2">pH used by the engine: <b>${fmt(ph, 1)}</b> (${soilSourceName()}).</p>`;
+  }
+  function renderEthics() {
+    const meta = state.meta || FALLBACK_META;
+    let fi = (meta.feature_importances || []).filter(f => f && isNum(f.importance));
+    const mx = fi.reduce((a, b) => Math.max(a, b.importance), 0);
+    const scale = (mx <= 1.0001) ? 100 : 1;
+    fi = fi.map(f => ({ feature: f.feature, pct: f.importance * scale })).sort((a, b) => b.pct - a.pct);
+    const pickPct = (re, dflt) => { const f = fi.find(x => re.test(x.feature)); return f ? f.pct : dflt; };
+    const rain = pickPct(/rain|precip/i, 57.7), rot = pickPct(/rotation|break/i, 19.5), sub = pickPct(/subsoil|root|gwetroot/i, 8.0);
+    const nice = n => /[_]/.test(n) ? String(n).replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()) : String(n);
+    const top = fi.slice(0, 10);
+    const maxPct = top.length ? top[0].pct : 100;
+    const hl = n => /rain|precip|rotation|break|subsoil|root/i.test(n);
+    $('#bodyEthics').innerHTML = `
+      <div class="grid sm:grid-cols-3 gap-2.5 mb-3">
+        <div class="rounded-xl bg-[#ECFDF3] border border-[#BBE5C8] p-3 text-center"><div class="text-xs font-bold text-stone-500 uppercase">Model accuracy (R²)</div><div class="text-2xl font-extrabold text-[#14532D]">${fmt(isNum(meta.r2_score) ? meta.r2_score : 0.9557, 4)}</div></div>
+        <div class="rounded-xl bg-[#ECFDF3] border border-[#BBE5C8] p-3 text-center"><div class="text-xs font-bold text-stone-500 uppercase">Typical error (MAE)</div><div class="text-2xl font-extrabold text-[#14532D]">${fmt(isNum(meta.mae_t_ha) ? meta.mae_t_ha : 0.16, 2)} t/ha</div></div>
+        <div class="rounded-xl bg-[#ECFDF3] border border-[#BBE5C8] p-3 text-center"><div class="text-xs font-bold text-stone-500 uppercase">Grid points</div><div class="text-2xl font-extrabold text-[#14532D]">${esc(meta.grid_points != null ? meta.grid_points : 784)}</div></div>
+      </div>
+      <p class="text-xs text-stone-500 mb-3">${esc(meta.model_type || 'Random Forest')} · feature importance read from <code>model_metadata.json</code>${state.usingFallback ? ' (built-in copy — file not reachable)' : ''}.</p>
+      <div class="text-sm font-extrabold text-[#14532D] mb-1.5">What the AI pays attention to</div>
+      <div class="space-y-1.5" aria-label="Feature importance bar chart">
+        ${top.map(f => `<div class="flex items-center gap-2 text-sm">
+          <span class="w-40 sm:w-56 flex-none font-semibold ${hl(f.feature) ? 'text-[#B45309]' : 'text-stone-700'} truncate" title="${esc(nice(f.feature))}">${esc(nice(f.feature))}</span>
+          <div class="flex-1 h-4 bg-stone-200 rounded-full overflow-hidden"><div class="h-full rounded-full ${hl(f.feature) ? 'bg-[#D97706]' : 'bg-[#166534]'}" style="width:${Math.max(1, f.pct / maxPct * 100)}%"></div></div>
+          <span class="w-14 text-right font-extrabold text-[#14532D]">${f.pct.toFixed(1)}%</span></div>`).join('')}
+      </div>
+      <div class="mt-3 rounded-xl bg-amber-50 border border-amber-300 p-3 text-sm text-amber-950 leading-relaxed">
+        <b>Domain validity check:</b> the three biggest drivers match real agronomy — <b>Annual Rainfall (${rain.toFixed(1)}%)</b>, <b>Rotation Break (${rot.toFixed(1)}%)</b> (legume or break-crop benefits) and <b>Subsoil Moisture (${sub.toFixed(1)}%)</b>. A model leaning on these is behaving like an experienced Basin grower would expect.
+      </div>
+      <div class="mt-4 grid md:grid-cols-2 gap-3">
+        <div class="rounded-xl border border-stone-200 bg-white p-3">
+          <div class="text-sm font-extrabold text-[#14532D] mb-1">⚖️ Limits you should know about</div>
+          <ul class="text-sm text-stone-700 space-y-1.5 list-disc pl-5">
+            <li><b>Climate is about 50 km resolution</b> (NASA POWER) — local rain and frost can differ from the grid average.</li>
+            <li><b>Soil is about 250 m resolution</b> (ISRIC SoilGrids 2.0) — paddock-scale soil can vary from the satellite estimate.</li>
+            <li>Yields are calibrated model estimates, not guaranteed outcomes.</li>
+          </ul>
+        </div>
+        <div class="rounded-xl border border-stone-200 bg-white p-3">
+          <div class="text-sm font-extrabold text-[#14532D] mb-1">🧑‍🌾 Local agronomist 3-point checklist</div>
+          <ol class="text-sm text-stone-700 space-y-1.5 list-decimal pl-5">
+            <li>Confirm your paddock soil test (pH and deep nitrogen) matches the satellite estimate — enter lab results in Drawer 1.</li>
+            <li>Check paddock history: weeds, disease, herbicide residues and your district's sowing windows.</li>
+            <li>Check water allocation, input costs and the latest seasonal forecast before committing seed and fertiliser.</li>
+          </ol>
+        </div>
+      </div>
+      <div class="mt-4 rounded-xl bg-[#F7F5EE] border border-[#E4E0D0] p-3 text-xs text-stone-700 leading-relaxed">
+        <div class="font-extrabold text-[#14532D] text-sm mb-1">Data credits</div>
+        NASA POWER (climate and soil wetness) · NASA Earth Observations — MODIS (NDVI) and ECOSTRESS (ET / ESI) · ISRIC SoilGrids 2.0 (<b>CC BY 4.0</b>) · GRDC and NSW DPI crop rotation, nitrogen and sowing guides. Basemap © OpenStreetMap contributors; place search by Nominatim.
+      </div>`;
+  }
   function renderStage2() {
-    if (!result) return;
-    renderTop();
-    renderCards();
+    const err = $('#s2Error');
+    if (!state.result) {
+      err.textContent = state.error || 'No results available.';
+      err.classList.remove('hidden');
+      $('#rotationRow').innerHTML = ''; $('#compareRow').innerHTML = '';
+      $('#s2Chips').innerHTML = '';
+      return;
+    }
+    err.classList.add('hidden');
+    const n = hz();
+    $('#rotTitle').textContent = 'Compare ' + n + '-Year Rotations';
+    $('#calTitle').textContent = (n * 12) + '-Month Sowing & Frost/Heat Calendar';
+    renderChips();
+    renderRotationRow();
     renderCompare();
-    renderLabStatus();
     renderScore();
     renderCalendar();
     renderReadings();
     renderEthics();
+    updateLabUI();
   }
-
-  function renderTop() {
-    $('s2Chips').innerHTML =
-      '<span class="rounded-full bg-[#ECFDF5] border border-[#A7F3D0] text-[#14532D] px-3 py-1">📍 ' + esc(sel.label) + '</span>' +
-      '<span class="rounded-full bg-[#FFFBEB] border border-amber-300 text-amber-900 px-3 py-1">' + result.horizonYears + '-Year plan</span>' +
-      '<span class="rounded-full bg-[#FFFBEB] border border-amber-300 text-amber-900 px-3 py-1">' + esc(climateLabel(state.climate)) + '</span>' +
-      labBadgeHtml(result.isLabOverride);
-  }
-
-  function rankLabel(s, i) { var r = s.rank || i + 1; return r === 1 ? '#1 Top Pick' : '#' + r; }
-
-  function renderCards() {
-    $('s2Cards').innerHTML = result.strategies.map(function (s, i) {
-      var on = i === state.idx;
-      return '<button type="button" data-i="' + i + '" aria-pressed="' + on + '" class="text-left rounded-2xl p-4 border-2 transition bg-white fade-in ' + (on ? 'border-[#166534] shadow-lg ring-4 ring-[#BBF7D0]' : 'border-[#E7E0CC] hover:border-[#166534]') + '">' +
-        '<div class="flex items-center justify-between gap-2 mb-2"><span class="text-xs font-extrabold uppercase tracking-wider ' + (i === 0 ? 'text-[#B45309]' : 'text-stone-500') + '">' + rankLabel(s, i) + '</span>' +
-        (on ? '<span class="text-[11px] font-extrabold text-[#166534]">✓ SELECTED</span>' : '<span class="text-[11px] font-bold text-stone-400">Tap to compare</span>') + '</div>' +
-        '<div class="flex flex-wrap items-center gap-x-3 gap-y-2"><div class="font-extrabold text-[#14532D] text-base leading-snug">' + esc(seqTitle(s)) + '</div>' + scorePill(s.matchScore) + '</div>' +
-        '<div class="mt-2"><span class="inline-block rounded-full text-[11px] font-bold px-2.5 py-0.5 ' + (seasonTag(s) === 'Winter Annual' ? 'bg-[#ECFDF5] text-[#166534] border border-[#A7F3D0]' : 'bg-[#FFFBEB] text-[#B45309] border border-amber-300') + '">' + seasonTag(s) + '</span></div>' +
-        '<div class="mt-2 text-sm font-bold text-stone-800">' + esc(s.title || '') + '</div>' +
-        '<div class="text-xs text-stone-600 leading-snug">' + esc(s.subtitle || '') + '</div>' +
-        '<div class="mt-3 flex gap-4 text-xs font-bold"><span>' + fmt(s.avgYield, 2) + ' t/ha/yr</span><span style="color:' + deltaColor(s.valueDeltaPct) + '">' + signed(s.valueDeltaPct, 1) + '% value</span></div>' +
-        '</button>';
-    }).join('');
-    Array.prototype.forEach.call($('s2Cards').querySelectorAll('button'), function (b) {
-      b.addEventListener('click', function () {
-        state.idx = Number(b.dataset.i);
-        renderCards(); renderCompare(); renderScore(); renderCalendar();
-      });
-    });
-  }
-
-  function soilBoxHtml(s) {
-    var st = String(s.soilMatchStatus || '').toLowerCase();
-    var warn = /warn|caution|amber|poor|mismatch|limit|risk|check|marginal|fail|bad|low/.test(st);
-    var note = s.soilMatchNote || (warn ? 'Some crops in this sequence are a weaker fit for this soil.' : 'This sequence suits your soil.');
-    return '<div class="rounded-xl border-2 px-3 py-2.5 text-sm font-semibold ' + (warn ? 'border-amber-500 bg-amber-50 text-amber-900' : 'border-[#86EFAC] bg-[#F0FDF4] text-[#14532D]') + '">' + (warn ? '⚠️ ' : '✅ ') + esc(note) + '</div>';
-  }
-
-  function block(icon, title, rating, text) {
-    return '<div class="rounded-xl border border-[#EFEAD8] bg-[#FDFCF8] p-3"><div class="flex items-center justify-between gap-2 mb-1"><h4 class="text-sm font-extrabold text-[#14532D]">' + icon + ' ' + title + '</h4>' + (rating ? ratingBadge(rating) : '') + '</div><p class="text-sm text-stone-700 leading-relaxed">' + text + '</p></div>';
-  }
-
-  function renderCompare() {
-    if (!result) return;
-    var s = result.strategies[state.idx], b = result.baseline;
-    var sumS = null, sumB = null;
-    try { sumS = E.getFieldViewSummary(s, b, sel.cell, state.climate); } catch (e) { sumS = null; }
-    try { sumB = E.getFieldViewSummary(b, b, sel.cell, state.climate); } catch (e) { sumB = null; }
-
-    function header(label, obj, tagline) {
-      return '<div class="flex flex-wrap items-start justify-between gap-3 mb-3">' +
-        '<div class="min-w-0"><div class="text-xs font-extrabold uppercase tracking-wider text-[#B45309]">' + label + '</div>' +
-        '<div class="flex flex-wrap items-center gap-x-3 gap-y-2 mt-1"><h3 class="text-lg font-extrabold text-[#14532D] leading-snug">' + esc(seqTitle(obj)) + '</h3>' + scorePill(obj.matchScore) + '</div>' +
-        '<div class="mt-1.5 flex flex-wrap items-center gap-2"><span class="inline-block rounded-full text-[11px] font-bold px-2.5 py-0.5 ' + (seasonTag(obj) === 'Winter Annual' ? 'bg-[#ECFDF5] text-[#166534] border border-[#A7F3D0]' : 'bg-[#FFFBEB] text-[#B45309] border border-amber-300') + '">' + seasonTag(obj) + '</span>' +
-        (tagline ? '<span class="text-xs text-stone-600">' + esc(tagline) + '</span>' : '') + '</div></div></div>';
+  /* ---------- lab override UI ---------- */
+  function updateLabUI() {
+    const r = state.result;
+    const on = !!(r && r.isLabOverride);
+    const b = $('#labBadge');
+    b.textContent = on ? 'Farmer Lab Soil Test' : 'Regional Satellite Estimate';
+    b.className = 'text-xs font-extrabold px-2.5 py-1 rounded-full border ' + (on ? 'bg-amber-100 text-amber-900 border-amber-300' : 'bg-sky-100 text-sky-900 border-sky-300');
+    if (r && !on) {
+      $('#labPH').placeholder = 'Regional: ' + fmt(r.effectivePH, 1);
+      $('#labN').placeholder = 'Regional: ' + fmt(r.startN, 0);
     }
-
-    function fieldBody(obj, sum, isBase) {
-      var overall = ratingFromScore(obj.matchScore);
-      var hRating = sum ? normRating(sum.harvestRating, obj.matchScore) : ratingFromScore(obj.matchScore);
-      var dRating = sum ? normRating(sum.droughtRating, obj.matchScore) : ratingFromScore(obj.matchScore);
-      var sRating = sum ? normRating(sum.soilRating, obj.matchScore) : ratingFromScore(obj.matchScore);
-      var valueLine = isBase
-        ? 'About ' + fmt(obj.avgYield, 2) + ' t/ha/yr worth roughly $' + fmt(obj.avgGrossValue, 0) + '/ha/yr. This is your reference point.'
-        : 'About ' + fmt(obj.avgYield, 2) + ' t/ha/yr (' + signed(obj.deltaPct, 1) + '% vs your routine) worth roughly $' + fmt(obj.avgGrossValue, 0) + '/ha/yr (' + signed(obj.valueDeltaPct, 1) + '%).';
-      var html = '<div class="flex items-center gap-3 mb-3"><span class="text-sm font-bold text-stone-600">Overall:</span>' + ratingBadge(overall, true) + '</div><div class="space-y-3">';
-      html += block('🌾', 'Harvest &amp; Value Outlook', hRating, esc(sum && sum.harvestText ? sum.harvestText : '') + (sum && sum.harvestText ? '<br />' : '') + '<span class="font-semibold text-stone-800">' + esc(valueLine) + '</span>');
-      html += block('☔', 'Drought &amp; Weather Reliability', dRating, esc(sum && sum.droughtText ? sum.droughtText : 'Reliability reflects the ' + climateLabel(state.climate).toLowerCase() + ' outlook you selected.'));
-      html += block('🌱', 'Soil &amp; Nitrogen Health', sRating, esc(sum && sum.soilText ? sum.soilText : 'Nitrogen moves from ' + fmt(obj.startN, 0) + ' to ' + fmt(obj.endN, 0) + ' kg N/ha over the plan.'));
-      if (!isBase) {
-        html += '<div class="rounded-xl border-2 border-[#D97706] bg-[#FFFBEB] p-3"><h4 class="text-sm font-extrabold text-[#B45309] mb-1">🚜 Next Step on Farm</h4><p class="text-sm text-stone-800 font-semibold leading-relaxed">' + esc(sum && sum.actionTakeaway ? sum.actionTakeaway : 'Discuss this rotation with your local agronomist before changing your plan.') + '</p></div>';
-      } else {
-        html += '<div class="rounded-xl border border-dashed border-[#D6CFB8] bg-white p-3 text-sm text-stone-600">Every comparison is measured against this routine, which is what you told us you currently grow.</div>';
-      }
-      return html + '</div>';
-    }
-
-    function metric(title, tip, srcText, inner) {
-      return '<div class="rounded-xl border border-[#EFEAD8] bg-[#FDFCF8] p-3"><div class="flex items-center justify-between gap-2 mb-2"><h4 class="text-sm font-extrabold text-[#14532D] flex items-center gap-2">' + title + ' ' + q(tip) + '</h4>' + src(srcText) + '</div>' + inner + '</div>';
-    }
-
-    function yearChips(obj) {
-      var yb = obj.yearlyBreakdown;
-      if (!Array.isArray(yb) || !yb.length) return '';
-      var names = cropNames(obj);
-      return '<div class="mt-2 flex flex-wrap gap-1.5">' + yb.map(function (e, i) {
-        var y = null;
-        if (e && typeof e === 'object') {
-          ['yield', 'yieldTHa', 'yield_t_ha', 'predictedYield', 'expectedYield', 'y', 'tHa'].some(function (k) { if (isNum(e[k])) { y = e[k]; return true; } return false; });
-          if (y == null) Object.keys(e).some(function (k) { if (/yield/i.test(k) && isNum(e[k])) { y = e[k]; return true; } return false; });
-        } else if (isNum(e)) y = e;
-        var crop = (e && typeof e === 'object' && (e.crop || e.name)) || names[i] || '';
-        if (y == null) return '';
-        return '<span class="text-[11px] font-bold rounded-full bg-white border border-[#D6CFB8] px-2 py-0.5">Y' + (i + 1) + ' ' + esc(crop) + ' · ' + y.toFixed(2) + '</span>';
-      }).join('') + '</div>';
-    }
-
-    function rangeText(r) {
-      if (Array.isArray(r) && r.length >= 2) return fmt(r[0], 2) + '–' + fmt(r[1], 2);
-      if (r && typeof r === 'object') {
-        var lo = r.min != null ? r.min : (r.low != null ? r.low : r.lo), hi = r.max != null ? r.max : (r.high != null ? r.high : r.hi);
-        if (lo != null && hi != null) return fmt(lo, 2) + '–' + fmt(hi, 2);
-      }
-      return r != null ? esc(r) : '—';
-    }
-
-    function dataBody(obj, isBase) {
-      var conf = Math.max(0, Math.min(100, Math.round(pct01(obj.confidence))));
-      var trees = '';
-      for (var i = 0; i < 100; i++) trees += '<span class="' + (i < conf ? 'on' : '') + '"></span>';
-      var fit = obj.fitBars || {};
-      var fitRows = [['profit', 'Farm Profit'], ['water', 'Water Saving'], ['soil', 'Soil Health & N'], ['erosion', 'Erosion Control']].map(function (f) {
-        var v = Math.max(0, Math.min(100, Math.round(pct01(fit[f[0]]))));
-        return '<div class="mb-1.5"><div class="flex justify-between text-xs font-bold text-stone-700"><span>' + f[1] + '</span><span>' + v + '%</span></div><div class="h-2.5 rounded-full bg-stone-200 overflow-hidden"><div class="h-full rounded-full" style="width:' + v + '%;background:' + (v >= 66 ? '#166534' : v >= 40 ? '#D97706' : '#B45309') + '"></div></div></div>';
-      }).join('');
-      var html = '<div class="space-y-3">';
-      html += metric('Expected Harvest (t/ha/yr)', 'Average yearly grain yield across the plan, in tonnes per hectare. The range shows the low-to-high spread the model expects.', 'Random-forest ensemble trained on NASA POWER climate, MODIS NDVI, ECOSTRESS ET/ESI and ISRIC SoilGrids 2.0 soil layers, calibrated to GRDC yield ranges.',
-        '<div class="flex items-baseline gap-2 flex-wrap"><span class="text-3xl font-black text-[#14532D]">' + fmt(obj.avgYield, 2) + '</span><span class="text-xs font-bold text-stone-500">t/ha/yr</span>' +
-        (isBase ? '' : '<span class="text-sm font-extrabold" style="color:' + deltaColor(obj.deltaYield) + '">' + signed(obj.deltaYield, 2) + ' t/ha (' + signed(obj.deltaPct, 1) + '%)</span>') + '</div>' +
-        '<div class="text-xs text-stone-600 mt-1">Likely range: <strong>' + rangeText(obj.yieldRange) + '</strong> t/ha</div>' + yearChips(obj));
-      html += metric('Estimated Crop Value ($/ha/yr)', 'Average gross crop value per hectare per year at long-run indicative grain prices. This is gross value, not profit after costs.', 'Modelled yield multiplied by indicative long-run Australian grain prices (GRDC-aligned). Not a price forecast.',
-        '<div class="flex items-baseline gap-2 flex-wrap"><span class="text-3xl font-black text-[#B45309]">$' + fmt(obj.avgGrossValue, 0) + '</span><span class="text-xs font-bold text-stone-500">/ha/yr</span>' +
-        (isBase ? '' : '<span class="text-sm font-extrabold" style="color:' + deltaColor(obj.valueDelta) + '">' + (Number(obj.valueDelta) < 0 ? '−' : '+') + '$' + fmt(Math.abs(Number(obj.valueDelta)), 0) + ' (' + signed(obj.valueDeltaPct, 1) + '%)</span>') + '</div>');
-      html += metric('Forecast Confidence (%)', 'How strongly the 100 decision trees in the model agree on this forecast. Higher means the trees give similar answers.', 'Share of the 100 trees in the random-forest ensemble that agree within the predicted range.',
-        '<div class="flex items-baseline gap-2"><span class="text-3xl font-black text-[#166534]">' + conf + '%</span><span class="text-xs font-bold text-stone-500">ensemble agreement</span></div><div class="tree-bar mt-2" aria-label="' + conf + ' of 100 trees agree">' + trees + '</div><div class="text-[11px] text-stone-500 mt-1">≈ ' + conf + ' of 100 trees agree</div>');
-      html += metric('Nitrogen Balance (kg N/ha)', 'Soil nitrogen at the start and end of the plan. Legumes add nitrogen; cereals and canola draw it down.', 'Deep-N starting estimate from SoilGrids/satellite model (or your lab test), plus legume N credits and crop removal rates based on GRDC guidance.',
-        '<div class="flex items-center gap-2 text-sm font-bold text-stone-800 flex-wrap"><span>' + fmt(obj.startN, 0) + '</span><span>→</span><span>' + fmt(obj.endN, 0) + ' kg N/ha</span></div>' +
-        '<div class="mt-1 text-sm"><span class="font-extrabold" style="color:' + deltaColor(obj.nBalance) + '">Balance ' + signed(obj.nBalance, 0) + ' kg N/ha</span>' +
-        (isBase ? '' : ' · <span class="font-extrabold" style="color:' + deltaColor(obj.nDeltaVsBaseline) + '">' + signed(obj.nDeltaVsBaseline, 0) + ' vs your routine</span>') + '</div>' +
-        '<div class="text-xs text-stone-600 mt-1">Legume N credit: <strong>' + fmt(obj.legumeCredit, 0) + ' kg N/ha</strong></div>');
-      html += metric('Fit to Your Priorities', 'How well this sequence serves each goal you weighted in Step 2. Longer green bars are a better fit.', 'Derived from the engine’s water-use, nitrogen, ground-cover and gross-value scores for this crop sequence.', fitRows);
-      return html + '</div>';
-    }
-
-    var left = '<div class="card p-4 sm:p-5 fade-in">' + header('Your Current Routine', b, 'Reference baseline') +
-      (state.view === 'field' ? fieldBody(b, sumB, true) : dataBody(b, true)) + '<div class="mt-3">' + soilBoxHtml(b) + '</div></div>';
-    var right = '<div class="card p-4 sm:p-5 fade-in" style="border-color:#166534;border-width:2px">' + header('Selected AI Rotation · ' + rankLabel(s, state.idx), s, s.title || '') +
-      (state.view === 'field' ? fieldBody(s, sumS, false) : dataBody(s, false)) + '<div class="mt-3">' + soilBoxHtml(s) + '</div></div>';
-    $('s2Compare').innerHTML = left + right;
+    if (r) $('#labMsg').textContent = (on ? 'Lab values applied — ' : 'Using regional estimate — ') + 'pH ' + fmt(r.effectivePH, 1) + ', starting deep N ' + fmt(r.startN, 0) + ' kg/ha.';
   }
-
-  /* ===================== DRAWERS ===================== */
-  function onLabInput() {
-    var ph = $('labPH').value, n = $('labN').value;
-    state.lab.pH = ph; state.lab.deepN = n;
-    if (ph !== '' && n !== '') { state.lab.use = true; $('labUse').checked = true; }
-    clearTimeout(labTimer);
-    labTimer = setTimeout(applyLab, 250);
-  }
-
   function applyLab() {
-    var msg = $('labMsg');
-    var pH = parseFloat(state.lab.pH), n = parseFloat(state.lab.deepN);
-    msg.textContent = '';
-    if (state.lab.use) {
-      if (!isFinite(pH) || !isFinite(n)) msg.textContent = 'Enter both pH (CaCl₂) and Deep N to apply your lab test.';
-      else if (pH < 3.5 || pH > 9.5) msg.textContent = 'pH (CaCl₂) should be between 3.5 and 9.5.';
-      else if (n < 0 || n > 600) msg.textContent = 'Deep N should be between 0 and 600 kg N/ha.';
-    }
-    if (state.stage === 2 && runEvaluate()) renderStage2();
-    else renderLabStatus();
+    const ph = parseFloat($('#labPH').value), n = parseFloat($('#labN').value);
+    const msg = $('#labMsg');
+    if (!isNum(ph) || ph < 3.5 || ph > 9.5) { msg.textContent = '⚠ Enter a pH (CaCl2) between 3.5 and 9.5.'; return; }
+    if (!isNum(n) || n < 0 || n > 500) { msg.textContent = '⚠ Enter Deep N between 0 and 500 kg/ha.'; return; }
+    state.lab = { enabled: true, pH: ph, deepN: n };
+    runEngine(); renderAll();
   }
-
-  function renderLabStatus() {
-    var isLab = result ? result.isLabOverride : false;
-    $('labBadge').innerHTML = labBadgeHtml(isLab);
-    $('labEffective').innerHTML = result ? 'Effective soil pH <strong>' + fmt(result.effectivePH, 1) + '</strong> CaCl₂ · starting deep N <strong>' + fmt(result.startN, 0) + '</strong> kg N/ha' : '';
+  function clearLab() {
+    state.lab = { enabled: false, pH: null, deepN: null };
+    $('#labPH').value = ''; $('#labN').value = '';
+    runEngine(); renderAll();
   }
-
-  function renderScore() {
-    if (!result) return;
-    var s = result.strategies[state.idx];
-    var sb = s.scoreBreakdown || {};
-    var rows = [
-      { label: 'RF Performance & Confidence', w: 35, v: sb.rfPoints, color: '#166534', desc: 'Predicted yield, value and how strongly the 100 trees agree.' },
-      { label: 'Soil pH / Clay Fit', w: 20, v: sb.soilPoints, color: '#D97706', desc: 'How well every crop in the sequence suits your soil pH and clay content.' },
-      { label: 'Dynamic Priority Alignment', w: 45, v: sb.priorityPoints, color: '#B45309', desc: 'How well the sequence delivers the goals you weighted in Step 2.' }
-    ];
-    var html = '<div class="flex flex-wrap items-center gap-3 mb-4"><span class="text-sm font-bold text-stone-600">Showing breakdown for</span><span class="font-extrabold text-[#14532D]">' + esc(seqTitle(s)) + '</span>' + scorePill(s.matchScore) + '</div><div class="space-y-4">';
-    rows.forEach(function (r) {
-      var v = Number(r.v), w = isFinite(v) ? Math.max(0, Math.min(100, v / r.w * 100)) : 0;
-      html += '<div><div class="flex flex-wrap items-center justify-between gap-2 text-sm"><span class="font-extrabold text-stone-800">' + r.w + '% · ' + r.label + '</span><span class="font-black" style="color:' + r.color + '">' + fmt(v, 1) + ' / ' + r.w + ' pts</span></div>' +
-        '<div class="h-3 rounded-full bg-stone-200 overflow-hidden mt-1"><div class="h-full rounded-full" style="width:' + w + '%;background:' + r.color + '"></div></div><div class="text-xs text-stone-600 mt-1">' + r.desc + '</div></div>';
-    });
-    html += '</div>';
-    html += '<div class="mt-4 rounded-xl bg-[#F7F5EE] border border-[#E7E0CC] p-3 text-sm text-stone-800"><strong>Total:</strong> ' + fmt(sb.rfPoints, 1) + ' + ' + fmt(sb.soilPoints, 1) + ' + ' + fmt(sb.priorityPoints, 1) + ' ≈ <strong>' + Math.round(Number(s.matchScore)) + ' / 100</strong>. The 45% priority share moves live as you change the four sliders in Step 2; the other 55% is fixed by the model and your soil.</div>';
-    html += '<div class="mt-3 rounded-xl border-2 border-[#86EFAC] bg-[#F0FDF4] p-3 text-sm text-[#14532D]"><strong>GRDC calibration note:</strong> Yield forecasts are checked against published GRDC regional yield benchmarks for Australian broadacre crops so results stay within realistic paddock ranges. The score ranks options against each other — it is not a guarantee of yield or profit.</div>';
-    $('scoreBox').innerHTML = html;
+  /* ---------- global render + stage flow ---------- */
+  function renderAll() {
+    renderQuick();
+    renderLocation();
+    renderSummary();
+    if (state.stage === 2) renderStage2(); else updateLabUI();
   }
-
-  function monthName(m) {
-    if (typeof m === 'number' || /^\d+$/.test(String(m))) { var n = Number(m); return MONTHS[((n - 1) % 12 + 12) % 12]; }
-    return String(m == null ? '' : m);
+  function goStage(n) {
+    state.stage = n;
+    $('#stage1').classList.toggle('hidden', n !== 1);
+    $('#stage2').classList.toggle('hidden', n !== 2);
+    const el = n === 1 ? $('#stage1') : $('#stage2');
+    el.classList.remove('fade-in'); void el.offsetWidth; el.classList.add('fade-in');
+    if (n === 2) renderStage2();
+    else setTimeout(() => { if (map) { map.invalidateSize(); if (state.pin) map.panTo([state.pin.lat, state.pin.lng]); } }, 80);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
-  function alertTone(level) {
-    var l = String(level == null ? '' : level).toLowerCase();
-    if (/crit|severe|high|red|danger|extreme/.test(l)) return { bg: '#FEE2E2', bd: '#EF4444', fg: '#7F1D1D', tag: 'Critical' };
-    if (/warn|watch|amber|medium|moderate|caution/.test(l)) return { bg: '#FEF3C7', bd: '#F59E0B', fg: '#78350F', tag: 'Watch' };
-    if (/info|low|note|advis|blue/.test(l)) return { bg: '#E0F2FE', bd: '#38BDF8', fg: '#0C4A6E', tag: 'Info' };
-    return { bg: '#F0FDF4', bd: '#BBF7D0', fg: '#14532D', tag: '' };
+  function setView(v) {
+    state.view = v;
+    $('#viewField').setAttribute('aria-pressed', v === 'field');
+    $('#viewData').setAttribute('aria-pressed', v === 'data');
+    renderSummary();
+    if (state.stage === 2) renderStage2();
   }
-
-  function renderCalendar() {
-    if (!result) return;
-    var s = result.strategies[state.idx];
-    var cal = [];
-    try { cal = E.generateCalendar(s, sel.cell, state.climate) || []; } catch (e) { cal = []; }
-    var months = result.horizonYears === 2 ? 24 : 36;
-    var html = '<div class="flex flex-wrap items-center justify-between gap-2 mb-3"><div class="font-extrabold text-[#14532D]">' + months + '-Month timeline · ' + esc(seqTitle(s)) + '</div>' + src('Sowing windows, frost and heat risk generated by the AcreArc engine from NASA POWER climate data (including GWETTOP topsoil wetness), your selected season outlook and GRDC sowing guidance.') + '</div>';
-    if (!cal.length) {
-      html += '<p class="text-sm text-stone-600">No calendar could be generated for this plan.</p>';
-      $('calBox').innerHTML = html; return;
-    }
-    var gw = cal.filter(function (c) { return /gwettop|topsoil/i.test(String(c.note || '')); });
-    var gwVal = findNum(sel.cell, [/gwettop/i]);
-    html += '<div class="mb-4 rounded-xl border-2 ' + (gw.length ? 'border-amber-500 bg-amber-50' : 'border-[#BBF7D0] bg-[#F0FDF4]') + ' p-3 text-sm"><div class="font-extrabold ' + (gw.length ? 'text-amber-900' : 'text-[#14532D]') + ' mb-1">🌧️ Autumn topsoil wetness (GWETTOP) alerts' + (gwVal != null ? ' · cell value ' + gwVal.toFixed(2) : '') + '</div>';
-    if (gw.length) {
-      html += '<ul class="list-disc pl-5 space-y-1 text-amber-900">' + gw.map(function (c) { return '<li><strong>' + esc(monthName(c.month)) + ' ' + esc(c.year >= 1900 ? c.year : 'Year ' + c.year) + ':</strong> ' + esc(c.note) + '</li>'; }).join('') + '</ul>';
-    } else html += '<p class="text-[#14532D]">No topsoil wetness alerts for the autumn sowing windows in this plan.</p>';
-    html += '</div>';
-
-    var groups = [], map2 = {};
-    cal.forEach(function (c) {
-      var k = String(c.year);
-      if (!map2[k]) { map2[k] = []; groups.push(k); }
-      map2[k].push(c);
-    });
-    groups.forEach(function (k) {
-      html += '<h4 class="mt-4 mb-2 text-sm font-extrabold text-[#B45309] uppercase tracking-wide">' + (Number(k) >= 1900 ? k : 'Year ' + esc(k)) + '</h4><div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">';
-      map2[k].forEach(function (c) {
-        var t = alertTone(c.alertLevel);
-        html += '<div class="rounded-xl border-2 p-2 text-xs" style="background:' + t.bg + ';border-color:' + t.bd + ';color:' + t.fg + '">' +
-          '<div class="flex items-center justify-between"><span class="font-black text-sm">' + esc(monthName(c.month)) + '</span>' + (t.tag ? '<span class="font-extrabold text-[10px] uppercase">' + t.tag + '</span>' : '') + '</div>' +
-          '<div class="font-extrabold mt-0.5">' + esc(c.crop || '—') + '</div><div class="font-semibold opacity-90">' + esc(c.phase || '') + '</div>' +
-          (c.note ? '<div class="mt-1 leading-snug opacity-90">' + esc(c.note) + '</div>' : '') + '</div>';
-      });
-      html += '</div>';
-    });
-    html += '<div class="mt-4 flex flex-wrap gap-3 text-[11px] font-bold"><span class="px-2 py-0.5 rounded-full" style="background:#F0FDF4;border:1px solid #BBF7D0">Clear</span><span class="px-2 py-0.5 rounded-full" style="background:#E0F2FE;border:1px solid #38BDF8">Info</span><span class="px-2 py-0.5 rounded-full" style="background:#FEF3C7;border:1px solid #F59E0B">Watch</span><span class="px-2 py-0.5 rounded-full" style="background:#FEE2E2;border:1px solid #EF4444">Critical</span></div>';
-    $('calBox').innerHTML = html;
+  function resetChoices() {
+    state.priorities = Object.assign({}, DEFAULT_PRIORITIES);
+    state.climate = 'normal';
+    state.horizon = 3;
+    state.baselineCrops = DEFAULT_BASELINE.slice();
+    state.lab = { enabled: false, pH: null, deepN: null };
+    state.selected = 0;
+    $('#labPH').value = ''; $('#labN').value = '';
+    $('#searchInput').value = ''; $('#searchMsg').textContent = '';
+    renderSliders(); renderClimate(); renderBaseline();
+    const list = (E() && E().QUICK_JUMP_REGIONS) || [];
+    const g = list.find(r => /griffith/i.test(r.name)) || FALLBACK_GRIFFITH;
+    selectQuick(g, true);
   }
-
-  function prettyKey(k) { return k.replace(/_/g, ' ').replace(/\s+/g, ' ').trim(); }
-  function unitFor(k) {
-    if (/t2m|temp|tmax|tmin/i.test(k)) return '°C';
-    if (/prec|rain/i.test(k)) return 'mm/day';
-    if (/clay|sand|silt/i.test(k)) return '%';
-    if (/gwet/i.test(k)) return '0–1 wetness';
-    if (/ndvi|evi/i.test(k)) return 'index';
-    return '';
-  }
-  function renderReadings() {
-    var cell = sel && sel.cell;
-    var html = '';
-    var head = '<div class="flex flex-wrap items-center justify-between gap-2 mb-3"><div class="text-sm text-stone-700">Active grid cell: <strong>' + (cell ? Number(cLat(cell)).toFixed(2) + '°, ' + Number(cLng(cell)).toFixed(2) + '°' : '—') + '</strong>' + (cell && (cell.name || cell.cell_id || cell.id) ? ' · ' + esc(cell.name || cell.cell_id || cell.id) : '') + '</div>' +
-      src('NASA POWER (climate), MODIS (NDVI vegetation greenness), ECOSTRESS (evapotranspiration and Evaporative Stress Index) and ISRIC SoilGrids 2.0 (soil), fused onto a ~50 km Basin grid.') + '</div>';
-    if (!cell) { $('readBox').innerHTML = head + '<p class="text-sm text-stone-600">No cell selected.</p>'; return; }
-    var groups = { nasa: [], modis: [], eco: [], soil: [], other: [] };
-    Object.keys(cell).forEach(function (k) {
-      var v = cell[k];
-      if (!isNum(v)) return;
-      if (/^(lat|lng|lon|latitude|longitude|id|cell_?id|index|idx|row|col)$/i.test(k)) return;
-      var g;
-      if (/ndvi|evi|modis/i.test(k)) g = 'modis';
-      else if (/ecostress|(^|_)(et|esi|pet|eto)(_|$)|evapo/i.test(k)) g = 'eco';
-      else if (/gwet/i.test(k)) g = 'nasa';
-      else if (/(^|_)ph|clay|sand|silt|soc|nitrogen|cec|bdod|ocd|soil/i.test(k)) g = 'soil';
-      else if (/t2m|prec|rain|allsky|rh2m|ws2m|srad|radiation|temp|tmax|tmin|vpd|nasa|solar|frost|heat|wind|humid/i.test(k)) g = 'nasa';
-      else g = 'other';
-      groups[g].push([k, v]);
-    });
-    var defs = [['nasa', 'NASA POWER (climate)'], ['modis', 'MODIS NDVI (vegetation)'], ['eco', 'ECOSTRESS ET / ESI (plant water stress)'], ['soil', 'ISRIC SoilGrids 2.0 (soil)'], ['other', 'Other model inputs']];
-    var rows = '';
-    defs.forEach(function (d) {
-      var list = groups[d[0]];
-      if (!list.length) return;
-      rows += '<tr class="bg-[#F7F5EE]"><th colspan="3" class="text-left px-3 py-2 text-xs font-extrabold uppercase tracking-wide text-[#14532D]">' + d[1] + '</th></tr>';
-      list.forEach(function (p) {
-        rows += '<tr class="border-t border-[#EFEAD8]"><td class="px-3 py-1.5 font-semibold text-stone-800">' + esc(prettyKey(p[0])) + '</td><td class="px-3 py-1.5 text-right font-black text-[#14532D] tabular-nums">' + (Math.abs(p[1]) >= 100 ? p[1].toFixed(0) : p[1].toFixed(3).replace(/0+$/, '').replace(/\.$/, '')) + '</td><td class="px-3 py-1.5 text-xs text-stone-500">' + unitFor(p[0]) + '</td></tr>';
-      });
-    });
-    if (!rows) rows = '<tr><td class="px-3 py-3 text-stone-600">This cell has no numeric readings to display.</td></tr>';
-    html = head + '<div class="overflow-x-auto rounded-xl border border-[#E7E0CC]"><table class="w-full text-sm"><thead><tr class="bg-[#14532D] text-white text-xs uppercase tracking-wide"><th class="text-left px-3 py-2">Reading</th><th class="text-right px-3 py-2">Value</th><th class="text-left px-3 py-2">Unit</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
-    $('readBox').innerHTML = html;
-  }
-
-  function renderEthics() {
-    var m = meta;
-    var html = '';
-    var fi = [];
-    if (m && m.feature_importances) {
-      if (Array.isArray(m.feature_importances)) {
-        m.feature_importances.forEach(function (e) {
-          if (Array.isArray(e)) fi.push([String(e[0]), Number(e[1])]);
-          else if (e && typeof e === 'object') fi.push([String(e.feature || e.name || e.key || ''), Number(e.importance != null ? e.importance : e.value)]);
-        });
-      } else {
-        Object.keys(m.feature_importances).forEach(function (k) { fi.push([k, Number(m.feature_importances[k])]); });
-      }
-    }
-    fi = fi.filter(function (x) { return isFinite(x[1]); }).sort(function (a, b) { return b[1] - a[1]; });
-    var total = fi.reduce(function (a, b) { return a + b[1]; }, 0) || 1;
-    var maxv = fi.length ? fi[0][1] : 1;
-
-    html += '<div class="grid sm:grid-cols-4 gap-3 mb-5">' +
-      [['Model', m && m.model_type ? m.model_type : 'Random Forest (100 trees)'], ['Grid points', m && m.grid_points != null ? m.grid_points : grid.length], ['R² score', m && isNum(Number(m.r2_score)) && m.r2_score != null ? Number(m.r2_score).toFixed(3) : 'n/a'], ['MAE (t/ha)', m && m.mae_t_ha != null && isNum(Number(m.mae_t_ha)) ? Number(m.mae_t_ha).toFixed(3) : 'n/a']].map(function (x) {
-        return '<div class="rounded-xl bg-[#F7F5EE] border border-[#E7E0CC] p-3"><div class="text-[11px] font-extrabold uppercase tracking-wide text-stone-500">' + x[0] + '</div><div class="text-base font-black text-[#14532D] break-words">' + esc(x[1]) + '</div></div>';
-      }).join('') + '</div>';
-
-    html += '<div class="flex items-center justify-between gap-2 mb-2"><h4 class="font-extrabold text-[#14532D]">What the model pays attention to (feature importance)</h4>' + src('Feature importances exported from the trained random-forest model (model_metadata.json).') + '</div>';
-    if (fi.length) {
-      html += '<div class="space-y-1.5 mb-5">' + fi.slice(0, 14).map(function (f) {
-        var w = Math.max(2, f[1] / maxv * 100);
-        return '<div class="flex items-center gap-2 text-xs"><div class="w-36 sm:w-52 shrink-0 text-right font-semibold text-stone-700 truncate" title="' + esc(f[0]) + '">' + esc(prettyKey(f[0])) + '</div><div class="flex-1 h-4 bg-stone-200 rounded-full overflow-hidden"><div class="h-full rounded-full" style="width:' + w + '%;background:linear-gradient(90deg,#166534,#D97706)"></div></div><div class="w-12 font-black text-[#14532D] tabular-nums">' + (f[1] / total * 100).toFixed(1) + '%</div></div>';
-      }).join('') + '</div>';
-    } else {
-      html += '<p class="text-sm text-stone-600 mb-5">Feature importance data is not available in this session (model_metadata.json could not be loaded).</p>';
-    }
-
-    html += '<div class="grid md:grid-cols-2 gap-4 mb-5">' +
-      '<div class="rounded-xl border border-[#E7E0CC] p-4"><h4 class="font-extrabold text-[#14532D] mb-1">Where this model is valid</h4><p class="text-sm text-stone-700 leading-relaxed">AcreArc was built only for the Murray–Darling Basin. Locations further than ' + SNAP_KM + ' km from a verified grid cell are blocked, because the model has never seen those climates or soils and would be guessing. Within the Basin it ranks options relative to each other; it does not predict a single paddock’s exact yield.</p></div>' +
-      '<div class="rounded-xl border-2 border-amber-400 bg-amber-50 p-4"><h4 class="font-extrabold text-amber-900 mb-1">Resolution disclaimer: 50 km vs 250 m</h4><p class="text-sm text-amber-900 leading-relaxed">Climate and satellite inputs are averaged over roughly 50 km grid cells, while ISRIC SoilGrids soil layers are mapped at 250 m. Your paddock can differ from the cell average because of local rainfall, soil changes and management. Treat results as a regional starting point and use the lab-test drawer to bring in your own soil numbers.</p></div></div>';
-
-    html += '<div class="rounded-xl border-2 border-[#166534] bg-[#F0FDF4] p-4 mb-5"><h4 class="font-extrabold text-[#14532D] mb-2">Local agronomist checklist</h4><ol class="list-decimal pl-5 space-y-1.5 text-sm text-stone-800">' +
-      '<li><strong>Confirm your soil:</strong> check paddock pH (CaCl₂), clay content and deep nitrogen with a recent lab test.</li>' +
-      '<li><strong>Check local conditions:</strong> compare sowing windows, frost and heat risk, herbicide history and disease pressure with local trial data.</li>' +
-      '<li><strong>Check the economics:</strong> test prices, input costs, machinery and marketing options against your own farm budget before changing rotation.</li></ol></div>';
-
-    html += '<div class="text-xs text-stone-600 leading-relaxed"><h4 class="font-extrabold text-[#14532D] text-sm mb-1">Data credits</h4>' +
-      '<p><strong>NASA POWER</strong> — climate and surface wetness parameters (NASA Langley Research Center POWER Project). <strong>MODIS NDVI</strong> — NASA Terra/Aqua vegetation index (NASA LP DAAC). <strong>ECOSTRESS</strong> — evapotranspiration and Evaporative Stress Index (NASA/JPL). <strong>ISRIC SoilGrids 2.0</strong> — global soil property maps at 250 m (ISRIC – World Soil Information, CC BY 4.0). <strong>GRDC</strong> — Grains Research and Development Corporation regional yield benchmarks and agronomy guidance used for calibration. Map data © OpenStreetMap contributors; place search by Nominatim.</p></div>';
-    $('ethicsBox').innerHTML = html;
-  }
-
-  /* ===================== TUTORIAL ===================== */
-  function T(x, y, s, sz, fill, w, anchor) {
-    return '<text x="' + x + '" y="' + y + '" font-size="' + (sz || 12) + '" font-weight="' + (w || 700) + '" fill="' + (fill || '#14532D') + '" text-anchor="' + (anchor || 'middle') + '" font-family="system-ui,sans-serif">' + s + '</text>';
-  }
-  function R(x, y, w, h, fill, stroke, rx, extra) {
-    return '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="' + (rx == null ? 10 : rx) + '" fill="' + fill + '" stroke="' + (stroke || 'none') + '" stroke-width="2" ' + (extra || '') + '/>';
-  }
-  function svgWrap(inner) { return '<svg viewBox="0 0 360 210" class="w-full max-w-xl h-auto" role="img" aria-hidden="true">' + inner + '</svg>'; }
-  function arrow(x1, y1, x2, y2) {
-    return '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="#D97706" stroke-width="3" stroke-linecap="round"/><circle cx="' + x2 + '" cy="' + y2 + '" r="4" fill="#D97706"/>';
-  }
-
-  var SLIDES = [
+  /* ---------- tutorial ---------- */
+  const SVG_WRAP = (inner, label) => `<svg viewBox="0 0 480 230" class="w-full h-auto block" role="img" aria-label="${label}" font-family="system-ui,Segoe UI,Arial,sans-serif"><rect width="480" height="230" fill="#F7F5EE"/>${inner}</svg>`;
+  const SLIDES = [
     {
-      kicker: 'Overview', title: 'Welcome to AcreArc',
-      body: [
-        'AcreArc compares <strong>your current rotation</strong> with the AI’s <strong>top 3 alternatives</strong> for a paddock in the Murray–Darling Basin.',
-        'You make three quick choices — region, priorities and season — then press <strong>YES — Generate Rotation Plan</strong>.',
-        'Results appear only after you confirm, so you always review your own setup first.'
-      ],
-      svg: function () {
-        return svgWrap(
-          R(12, 12, 104, 50, '#fff', '#14532D') + T(64, 34, '1 Region', 13) + T(64, 51, 'Pick on map', 10, '#57534E', 600) +
-          R(128, 12, 104, 50, '#fff', '#14532D') + T(180, 34, '2 Priorities', 13) + T(180, 51, 'Goals + routine', 10, '#57534E', 600) +
-          R(244, 12, 104, 50, '#fff', '#14532D') + T(296, 34, '3 Season', 13) + T(296, 51, 'Normal / Dry / Wet', 10, '#57534E', 600) +
-          arrow(64, 64, 130, 90) + arrow(180, 64, 180, 90) + arrow(296, 64, 230, 90) +
-          R(80, 92, 200, 34, '#166534', '#14532D', 12) + T(180, 114, 'YES — Generate Rotation Plan', 12, '#fff', 800) +
-          R(12, 144, 104, 56, '#fff', '#166534') + T(64, 162, '#1 Top Pick', 11, '#B45309', 800) + T(64, 186, '86 / 100', 16, '#14532D', 900) +
-          R(128, 144, 104, 56, '#fff', '#D6CFB8') + T(180, 162, '#2', 11, '#78716C', 800) + T(180, 186, '74 / 100', 16, '#2F855A', 900) +
-          R(244, 144, 104, 56, '#fff', '#D6CFB8') + T(296, 162, '#3', 11, '#78716C', 800) + T(296, 186, '61 / 100', 16, '#D97706', 900)
-        );
-      }
+      kicker: 'Welcome & Overview', title: 'Meet your AI crop rotation co-pilot',
+      text: 'AcreArc turns satellite and soil data into three ranked multi-year crop rotations for your paddock, and compares each one with what you do today.',
+      bullets: ['Stage 1: set up your farm in three quick steps — region, priorities, season.', 'Stage 2: compare rotations side by side, then dig deeper if you want the detail.', 'Switch between Field View (plain English) and Data View (numbers) any time.'],
+      svg: SVG_WRAP(`
+        <g text-anchor="middle">
+          <rect x="19" y="30" width="94" height="118" rx="12" fill="#fff" stroke="#D9D4BF"/>
+          <path d="M66 54c-10 0-17 7-17 16 0 12 17 28 17 28s17-16 17-28c0-9-7-16-17-16z" fill="#D97706"/><circle cx="66" cy="70" r="6" fill="#fff"/>
+          <text x="66" y="124" font-size="13" font-weight="700" fill="#14532D">1 · Region</text><text x="66" y="139" font-size="10" fill="#57534e">Pin your paddock</text>
+          <path d="M117 90h12m-5-5 5 5-5 5" stroke="#166534" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <rect x="135" y="30" width="94" height="118" rx="12" fill="#fff" stroke="#D9D4BF"/>
+          <g stroke="#166534" stroke-width="3" stroke-linecap="round"><path d="M154 56h56M154 72h56M154 88h56"/></g>
+          <circle cx="170" cy="56" r="6" fill="#D97706"/><circle cx="196" cy="72" r="6" fill="#D97706"/><circle cx="178" cy="88" r="6" fill="#D97706"/>
+          <text x="182" y="124" font-size="13" font-weight="700" fill="#14532D">2 · Priorities</text><text x="182" y="139" font-size="10" fill="#57534e">What matters most</text>
+          <path d="M233 90h12m-5-5 5 5-5 5" stroke="#166534" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <rect x="251" y="30" width="94" height="118" rx="12" fill="#fff" stroke="#D9D4BF"/>
+          <circle cx="285" cy="62" r="11" fill="#FBBF24"/><ellipse cx="303" cy="80" rx="20" ry="11" fill="#94A3B8"/><ellipse cx="290" cy="82" rx="14" ry="9" fill="#CBD5E1"/>
+          <text x="298" y="124" font-size="13" font-weight="700" fill="#14532D">3 · Season</text><text x="298" y="139" font-size="10" fill="#57534e">Dry, normal or wet</text>
+          <path d="M349 90h12m-5-5 5 5-5 5" stroke="#166534" stroke-width="3" fill="none" stroke-linecap="round"/>
+          <rect x="367" y="30" width="94" height="118" rx="12" fill="#166534"/>
+          <path d="M385 98l14-18 12 10 20-28" stroke="#FBBF24" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+          <text x="414" y="124" font-size="13" font-weight="700" fill="#fff">3 plans</text><text x="414" y="139" font-size="10" fill="#D1FAE5">ranked #1 – #3</text>
+          <rect x="19" y="168" width="442" height="44" rx="12" fill="#ECFDF3" stroke="#BBE5C8"/>
+          <text x="240" y="195" font-size="13" font-weight="700" fill="#14532D">Compare with your current routine — Field View or Data View</text>
+        </g>`, 'Overview of the three setup steps and the results')
     },
     {
-      kicker: 'Step 1', title: 'Murray–Darling Basin Map & Boundaries',
-      body: [
-        'Tap anywhere on the map, search a <strong>town or postcode</strong>, press <strong>Use My GPS Location</strong>, or use a <strong>Quick-Jump</strong> region button.',
-        'The dashed green line is the <strong>Murray–Darling Basin Coverage Zone</strong> — AcreArc only has verified data inside it.',
-        'Outside the zone you will see an amber warning and the Generate button stays switched off until you pick a place inside.',
-        'Use the <strong>⛶</strong> button under the zoom controls for a full-screen map. Hover or tap the region name to see its typical soil.'
-      ],
-      svg: function () {
-        var dots = '';
-        [[110, 70], [150, 55], [190, 70], [230, 85], [120, 100], [160, 110], [200, 120], [240, 125], [140, 145], [180, 150], [220, 155], [100, 125], [260, 105]].forEach(function (p) { dots += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="3" fill="#16A34A" opacity=".7"/>'; });
-        return svgWrap(
-          R(6, 6, 348, 198, '#E8EFE2', '#D6CFB8', 14) +
-          '<polygon points="70,80 140,36 240,48 290,110 250,172 150,182 84,150" fill="rgba(16,185,129,.12)" stroke="#059669" stroke-width="2.5" stroke-dasharray="7 6"/>' + dots +
-          '<path d="M170 125 q-16 -20 0 -42 q16 22 0 42z" fill="#D97706" stroke="#fff" stroke-width="2"/><circle cx="170" cy="100" r="4" fill="#fff"/>' +
-          '<circle cx="320" cy="42" r="14" fill="#DC2626"/>' + T(320, 48, '!', 18, '#fff', 900) + T(312, 70, 'Outside', 10, '#991B1B', 800) +
-          R(12, 12, 100, 18, '#FEF3C7', '#F59E0B', 6) + T(62, 25, 'Plan locked outside', 9, '#78350F', 800) +
-          R(14, 176, 192, 20, '#fff', '#A7F3D0', 6) + T(110, 190, 'Murray–Darling Basin Coverage Zone', 9.5, '#14532D', 800)
-        );
-      }
+      kicker: 'Step 1 · Region Map & GPS / Search', title: 'Pick Your Region',
+      text: 'Tell AcreArc where your paddock is. Every option snaps to the nearest satellite grid cell inside the highlighted Murray–Darling Basin.',
+      bullets: ['Click anywhere inside the highlighted Basin to drop a pin — you will see how many km away the matched grid cell is.', 'Locations outside the Basin dataset show an amber warning and the plan button stays disabled.', 'Search a town or postcode, tap Use My GPS Location, or use one of the quick-jump regions.', 'Press the ⛶ button under the zoom controls for a full-screen map.'],
+      svg: SVG_WRAP(`
+        <rect x="14" y="14" width="300" height="202" rx="12" fill="#DFE9D8" stroke="#BCCBB2"/>
+        <g fill="#16A34A" opacity=".6">${[0, 1, 2, 3, 4, 5, 6, 7].map(i => [0, 1, 2, 3, 4].map(j => `<circle cx="${40 + i * 33 + (j % 2) * 10}" cy="${70 + j * 30}" r="3.5"/>`).join('')).join('')}</g>
+        <circle cx="170" cy="130" r="20" fill="#F59E0B" opacity=".3"/><circle cx="170" cy="130" r="9" fill="#EA580C" stroke="#fff" stroke-width="3"/>
+        <rect x="24" y="24" width="30" height="30" rx="4" fill="#fff" stroke="#999"/><text x="39" y="46" font-size="20" text-anchor="middle" fill="#333">+</text>
+        <rect x="24" y="56" width="30" height="30" rx="4" fill="#fff" stroke="#999"/><text x="39" y="78" font-size="20" text-anchor="middle" fill="#333">−</text>
+        <rect x="24" y="88" width="30" height="30" rx="4" fill="#FEF3C7" stroke="#D97706" stroke-width="2"/><text x="39" y="110" font-size="18" text-anchor="middle" fill="#B45309">⛶</text>
+        <text x="62" y="108" font-size="10" fill="#B45309" font-weight="700">full screen</text>
+        <rect x="190" y="146" width="116" height="24" rx="6" fill="#fff" stroke="#CFC9B2"/><text x="248" y="162" font-size="10" text-anchor="middle" fill="#166534" font-weight="700">12.4 km to grid cell</text>
+        <rect x="330" y="22" width="136" height="30" rx="8" fill="#fff" stroke="#A8A29E" stroke-width="2"/><text x="340" y="42" font-size="11" fill="#78716c">🔍 Leeton or 2680</text>
+        <rect x="330" y="62" width="136" height="30" rx="8" fill="#166534"/><text x="398" y="82" font-size="11" fill="#fff" font-weight="700" text-anchor="middle">📡 Use My GPS</text>
+        <g font-size="10" font-weight="700" fill="#14532D">
+          ${['Griffith', 'Wagga Wagga', 'Moree', 'Mildura', 'Hay', 'Dubbo'].map((n, i) => `<rect x="${330 + (i % 2) * 70}" y="${108 + Math.floor(i / 2) * 34}" width="66" height="26" rx="13" fill="${i === 0 ? '#166534' : '#fff'}" stroke="#CFC9B2"/><text x="${363 + (i % 2) * 70}" y="${125 + Math.floor(i / 2) * 34}" text-anchor="middle" fill="${i === 0 ? '#fff' : '#14532D'}">${n}</text>`).join('')}
+        </g>`, 'Map with pin, search bar, GPS button and quick-jump region buttons')
     },
     {
-      kicker: 'Step 2', title: 'Priorities & Your Current Routine',
-      body: [
-        'Four sliders let you weight <strong>Water Saving</strong>, <strong>Soil Health &amp; Nitrogen</strong>, <strong>Erosion Control</strong> and <strong>Farm Profit</strong>. Push a slider higher when it matters more.',
-        'Under the sliders, tell AcreArc what you grow now: choose a <strong>3-Year</strong> or <strong>2-Year</strong> horizon and pick each year’s crop. The default is Wheat → Wheat → Wheat.',
-        'Your routine becomes the <strong>baseline</strong> every AI rotation is compared against.'
-      ],
-      svg: function () {
-        var rows = [['Water Saving', 150], ['Soil Health & N', 215], ['Erosion Control', 120], ['Farm Profit', 245]], out = '';
-        rows.forEach(function (r, i) {
-          var y = 28 + i * 30;
-          out += T(14, y + 4, r[0], 11, '#44403C', 700, 'start') + '<line x1="120" y1="' + y + '" x2="340" y2="' + y + '" stroke="#D6D3D1" stroke-width="6" stroke-linecap="round"/><line x1="120" y1="' + y + '" x2="' + r[1] + '" y2="' + y + '" stroke="#166534" stroke-width="6" stroke-linecap="round"/><circle cx="' + r[1] + '" cy="' + y + '" r="9" fill="#fff" stroke="#166534" stroke-width="3"/>';
-        });
-        out += R(12, 146, 336, 56, '#FBFAF5', '#E7E0CC', 12) + T(24, 164, 'Your Current Routine (Baseline)', 11, '#14532D', 800, 'start') +
-          R(24, 172, 84, 22, '#fff', '#14532D', 6) + T(66, 187, 'Wheat', 11) + T(120, 187, '→', 14, '#D97706', 900) +
-          R(134, 172, 84, 22, '#fff', '#14532D', 6) + T(176, 187, 'Wheat', 11) + T(230, 187, '→', 14, '#D97706', 900) +
-          R(244, 172, 84, 22, '#fff', '#14532D', 6) + T(286, 187, 'Wheat', 11);
-        return svgWrap(out);
-      }
+      kicker: 'Step 2 · Priority Sliders & Your Routine', title: 'What Matters Most to You?',
+      text: 'Weight four goals from 0 to 100, then tell AcreArc what you grow today. When you press YES — Generate Rotation Plan, the ranked rotations are built from your weights and compared with your routine.',
+      bullets: ['Profit — highest harvest value.', 'Water Efficiency — doing more with less irrigation or rain.', 'Soil & Nitrogen Health — building fertility, using legumes.', 'Erosion Protection — ground cover and stubble.', 'Your Current Routine (Baseline) — choose a 2-Year or 3-Year horizon and the crop for each year.'],
+      svg: SVG_WRAP(`
+        ${[['💰 Profit', 150, '#D97706'], ['💧 Water Efficiency', 190, '#166534'], ['🌱 Soil & Nitrogen Health', 160, '#166534'], ['🛡️ Erosion Protection', 100, '#B45309']].map((r, i) => `
+          <text x="30" y="${40 + i * 38}" font-size="12" font-weight="700" fill="#14532D">${r[0]}</text>
+          <rect x="30" y="${48 + i * 38}" width="250" height="8" rx="4" fill="#E5E7EB"/><rect x="30" y="${48 + i * 38}" width="${r[1]}" height="8" rx="4" fill="${r[2]}"/>
+          <circle cx="${30 + r[1]}" cy="${52 + i * 38}" r="10" fill="#fff" stroke="${r[2]}" stroke-width="3"/>`).join('')}
+        <rect x="310" y="26" width="156" height="170" rx="12" fill="#fff" stroke="#D9D4BF"/>
+        <text x="388" y="48" font-size="10" font-weight="800" text-anchor="middle" fill="#B45309">YOUR CURRENT ROUTINE</text>
+        <rect x="366" y="58" width="44" height="20" rx="10" fill="#fff" stroke="#CFC9B2"/><text x="388" y="72" font-size="9" font-weight="800" text-anchor="middle" fill="#14532D">2-Year</text>
+        <rect x="414" y="58" width="44" height="20" rx="10" fill="#166534"/><text x="436" y="72" font-size="9" font-weight="800" text-anchor="middle" fill="#fff">3-Year</text>
+        ${['Year 1', 'Year 2', 'Year 3'].map((y, i) => `<text x="${318 + i * 50}" y="104" font-size="8" font-weight="700" fill="#57534e">${y}</text><rect x="${318 + i * 50}" y="108" width="46" height="22" rx="6" fill="#fff" stroke="#A8A29E" stroke-width="1.5"/><text x="${322 + i * 50}" y="123" font-size="9" font-weight="700" fill="#14532D">Wheat</text>`).join('')}
+        <text x="388" y="166" font-size="9" text-anchor="middle" fill="#78716c">Wheat → Wheat → Wheat</text>
+        <text x="388" y="184" font-size="9" text-anchor="middle" fill="#78716c">is your comparison baseline</text>`, 'Four priority sliders and the current routine baseline selector')
     },
     {
-      kicker: 'Step 3', title: 'Season Outlook & Planning Horizon',
-      body: [
-        'Choose the season you want to plan for: <strong>Normal Season</strong>, <strong>Dry / El Niño</strong> or <strong>Wet / La Niña</strong>.',
-        'The outlook changes yield expectations, drought reliability and frost/heat or waterlogging warnings in the calendar.',
-        'The <strong>3-Year / 2-Year</strong> horizon decides whether you see a 36-month or 24-month calendar. Plans tagged <em>Winter Annual</em> use winter crops only; <em>Winter + Summer Opportunity</em> can add a summer crop when moisture allows.'
-      ],
-      svg: function () {
-        function card(x, label, icon) { return R(x, 20, 104, 110, '#fff', '#14532D', 14) + icon + T(x + 52, 112, label, 11, '#14532D', 800); }
-        var sun = '<circle cx="64" cy="62" r="16" fill="#F59E0B"/>';
-        var dry = '<circle cx="180" cy="62" r="16" fill="#D97706"/><path d="M150 96 l10 -6 l8 6 l10 -6 l8 6 l10 -6 l10 6" stroke="#92400E" stroke-width="2.5" fill="none"/>';
-        var wet = '<path d="M262 74 a14 14 0 0 1 4 -27 a18 18 0 0 1 34 4 a12 12 0 0 1 2 23z" fill="#94A3B8"/><g stroke="#0EA5E9" stroke-width="3" stroke-linecap="round"><line x1="270" y1="84" x2="266" y2="94"/><line x1="284" y1="84" x2="280" y2="94"/><line x1="298" y1="84" x2="294" y2="94"/></g>';
-        return svgWrap(card(12, 'Normal Season', sun) + card(128, 'Dry / El Niño', dry) + card(244, 'Wet / La Niña', wet) +
-          R(90, 154, 180, 38, '#fff', '#14532D', 12) + R(94, 158, 86, 30, '#14532D', null, 9) + T(137, 178, '3-Year', 12, '#fff', 800) + T(223, 178, '2-Year', 12, '#14532D', 800));
-      }
+      kicker: 'Step 3 · Season Outlook', title: 'Choose the season you expect',
+      text: 'Pick Dry, Normal or Wet. AcreArc re-runs its yield and reliability forecasts for that rainfall outlook so you can plan for the season ahead.',
+      bullets: ['Dry Year — below-average rain; drought-hardy rotations rise.', 'Normal Year — typical rainfall for your grid cell.', 'Wet Year — above-average rain; waterlogging and disease risk matter more.', 'Then check the Confirmation Summary and press YES — Generate Rotation Plan.'],
+      svg: SVG_WRAP(`
+        <g text-anchor="middle">
+        <rect x="24" y="40" width="130" height="130" rx="14" fill="#fff" stroke="#D9D4BF" stroke-width="2"/>
+        <circle cx="89" cy="86" r="22" fill="#FBBF24"/><g stroke="#F59E0B" stroke-width="3" stroke-linecap="round"><path d="M89 52v-8M89 120v8M55 86h-8M123 86h8M65 62l-6-6M113 110l6 6M113 62l6-6M65 110l-6 6"/></g>
+        <text x="89" y="152" font-size="13" font-weight="800" fill="#14532D">Dry Year</text>
+        <rect x="175" y="40" width="130" height="130" rx="14" fill="#ECFDF3" stroke="#166534" stroke-width="3"/>
+        <circle cx="205" cy="78" r="16" fill="#FBBF24"/><ellipse cx="245" cy="98" rx="30" ry="17" fill="#CBD5E1"/><ellipse cx="225" cy="102" rx="20" ry="13" fill="#E2E8F0"/>
+        <text x="240" y="152" font-size="13" font-weight="800" fill="#14532D">Normal Year</text>
+        <rect x="326" y="40" width="130" height="130" rx="14" fill="#fff" stroke="#D9D4BF" stroke-width="2"/>
+        <ellipse cx="391" cy="78" rx="32" ry="18" fill="#64748B"/><g stroke="#3B82F6" stroke-width="3" stroke-linecap="round"><path d="M368 104l-4 12M386 104l-4 12M404 104l-4 12M422 104l-4 12"/></g>
+        <text x="391" y="152" font-size="13" font-weight="800" fill="#14532D">Wet Year</text>
+        <text x="240" y="204" font-size="12" font-weight="700" fill="#B45309">Selected outlook is shown in your Confirmation Summary</text></g>`, 'Three season outlook cards: dry, normal and wet')
     },
     {
-      kicker: 'Results', title: 'Field View vs Data View & Match Scores',
-      body: [
-        '<strong>Field View</strong> (default) uses plain English and colour-coded badges: <strong>EXCELLENT, GOOD, AVERAGE, NEEDS IMPROVEMENT, POOR</strong>.',
-        '<strong>Data View</strong> shows the numbers: t/ha yield, $/ha value, forecast confidence from the 100-tree model, nitrogen balance and fit bars. Tap <strong>?</strong> for a definition and <strong>Source ⓘ</strong> for where it comes from.',
-        'Each rotation gets a <strong>match score out of 100</strong>: 35% model performance &amp; confidence, 20% soil pH/clay fit and 45% alignment with your priority sliders. Higher scores always mean better badges.',
-        'Switch views any time with the toggle in the top-right header.'
-      ],
-      svg: function () {
-        var bars = '';
-        [[170, 0.85], [188, 0.6], [206, 0.72]].forEach(function (b, i) { bars += R(198, 76 + i * 22, 140 * b[1] * 0.55, 10, ['#166534', '#D97706', '#2F855A'][i], null, 5) + R(198, 76 + i * 22, 77, 10, 'none', '#D6D3D1', 5); });
-        return svgWrap(
-          R(10, 40, 164, 160, '#fff', '#14532D', 14) + T(92, 60, 'FIELD VIEW', 11, '#B45309', 900) +
-          R(40, 70, 104, 24, '#2F855A', null, 12) + T(92, 87, 'GOOD', 13, '#fff', 900) +
-          R(24, 106, 136, 14, '#F3F0E4', null, 4) + R(24, 128, 120, 14, '#F3F0E4', null, 4) + R(24, 150, 130, 14, '#F3F0E4', null, 4) + R(24, 172, 100, 14, '#FFFBEB', '#D97706', 4) +
-          R(186, 40, 164, 160, '#fff', '#14532D', 14) + T(268, 60, 'DATA VIEW', 11, '#B45309', 900) +
-          T(198, 76 - 1, '', 1) + bars +
-          T(198, 160, '3.4 t/ha/yr', 14, '#14532D', 900, 'start') + T(198, 180, '$1,120 /ha  +9%', 11, '#B45309', 800, 'start') +
-          '<circle cx="180" cy="22" r="22" fill="#14532D"/>' + T(180, 27, '82/100', 12, '#fff', 900)
-        );
-      }
+      kicker: 'Results · Field View vs Data View', title: 'Compare rotations your way',
+      text: 'Stage 2 lists three AI rotations (#1 Top Pick, #2, #3), each with a score out of 100, above two cards: your current routine versus the rotation you select.',
+      bullets: ['Field View: colour-coded badges — EXCELLENT, GOOD, AVERAGE, NEEDS IMPROVEMENT, POOR — with plain-English notes and a Next Step on Farm.', 'Data View: harvest t/ha/yr, gross value $/ha/yr, extra gain, forecast confidence, nitrogen balance vs. your routine and priority-fit bars, with ? helpers and Source ⓘ tags.', 'Use ← Edit Farm Setup (Revert) to go back; your pin, sliders, routine and season are kept.'],
+      svg: SVG_WRAP(`
+        <rect x="18" y="18" width="214" height="194" rx="12" fill="#fff" stroke="#D9D4BF"/>
+        <text x="125" y="42" font-size="13" font-weight="800" text-anchor="middle" fill="#14532D">Field View</text>
+        ${[['Harvest Outlook', 'EXCELLENT', '#15803D'], ['Drought Reliability', 'GOOD', '#4D7C0F'], ['Soil & Nitrogen', 'AVERAGE', '#FBBF24'], ['Weather Risk', 'POOR', '#B91C1C']].map((r, i) => `
+          <text x="32" y="${74 + i * 36}" font-size="11" font-weight="700" fill="#44403c">${r[0]}</text>
+          <rect x="130" y="${60 + i * 36}" width="88" height="22" rx="11" fill="${r[2]}"/><text x="174" y="${75 + i * 36}" font-size="9" font-weight="800" text-anchor="middle" fill="${r[1] === 'AVERAGE' ? '#1c1917' : '#fff'}">${r[1]}</text>`).join('')}
+        <rect x="248" y="18" width="214" height="194" rx="12" fill="#fff" stroke="#D9D4BF"/>
+        <text x="355" y="42" font-size="13" font-weight="800" text-anchor="middle" fill="#14532D">Data View</text>
+        <text x="264" y="78" font-size="26" font-weight="800" fill="#14532D">3.42</text><text x="326" y="78" font-size="11" fill="#57534e">t/ha/yr</text>
+        <text x="264" y="104" font-size="14" font-weight="800" fill="#15803D">+0.38 t/ha</text>
+        <g>${Array.from({ length: 30 }, (_, i) => `<rect x="${264 + i * 6.3}" y="116" width="4.5" height="12" rx="1" fill="${i < 24 ? '#166534' : '#E5E7EB'}"/>`).join('')}</g>
+        <text x="264" y="146" font-size="10" fill="#57534e">Confidence 80% (100-tree bar)</text>
+        ${[['Profit', 150], ['Water', 120], ['Soil', 170]].map((r, i) => `<rect x="264" y="${158 + i * 17}" width="170" height="8" rx="4" fill="#E5E7EB"/><rect x="264" y="${158 + i * 17}" width="${r[1]}" height="8" rx="4" fill="#D97706"/>`).join('')}
+        <circle cx="440" cy="68" r="9" fill="#FEF3C7" stroke="#F5D78A"/><text x="440" y="72" font-size="11" font-weight="800" text-anchor="middle" fill="#B45309">?</text>`, 'Field View badges next to Data View numbers')
     },
     {
-      kicker: 'Dig Deeper', title: 'Paddock Lab Test & Dig Deeper Tools',
-      body: [
-        'Five <strong>Dig Deeper</strong> drawers sit below the comparison. Open any of them whenever you want more detail.',
-        '<strong>Lab soil test:</strong> type your paddock pH (CaCl₂) and deep N. The badge flips from <em>Regional Satellite Estimate</em> to <em>Farmer Lab Soil Test</em> and every ranking updates.',
-        '<strong>Score breakdown</strong> and <strong>24/36-month calendar</strong> (with GWETTOP autumn topsoil wetness alerts) explain the “why” and the “when”.',
-        '<strong>Satellite &amp; soil readings</strong> show the values for your grid cell. <strong>AI ethics</strong> shows what the model relies on, its limits and a 3-point checklist for your local agronomist.'
-      ],
-      svg: function () {
-        var d = '';
-        ['1  Lab Soil Test', '2  Viability Score', '3  Sowing & Frost/Heat Calendar', '4  Satellite & Soil Readings', '5  Ethics & Agronomist Check'].forEach(function (s, i) {
-          d += R(130, 12 + i * 38, 220, 30, '#fff', i === 0 ? '#166534' : '#D6CFB8', 10) + T(142, 32 + i * 38, s, 11, '#14532D', 800, 'start') + T(336, 32 + i * 38, '▾', 12, '#14532D', 900);
-        });
-        return svgWrap(
-          '<path d="M52 40 h36 v40 l26 70 a10 10 0 0 1 -9 14 h-70 a10 10 0 0 1 -9 -14 l26 -70z" fill="#ECFDF5" stroke="#166534" stroke-width="3"/><path d="M36 128 h68 l8 22 a8 8 0 0 1 -7 11 h-70 a8 8 0 0 1 -7 -11z" fill="#D97706" opacity=".85"/>' +
-          T(70, 30, 'pH  ·  Deep N', 11, '#14532D', 800) + d
-        );
-      }
+      kicker: 'Paddock Lab Override & Dig Deeper Tools', title: 'Go deeper when you need to',
+      text: 'Below the comparison are five collapsible Dig Deeper drawers for people who want to check the workings.',
+      bullets: ['Lab Soil Test: enter your own pH (CaCl2) and Deep N and the plan recalculates live.', 'Viability Score: see the 50% / 20% / 30% breakdown behind the 0–100 score.', 'Sowing & Frost/Heat Calendar (24 or 36 months), Satellite & Soil Readings, and AI Ethics with feature importance and an agronomist checklist.'],
+      svg: SVG_WRAP(`
+        <rect x="18" y="18" width="190" height="194" rx="12" fill="#fff" stroke="#D9D4BF"/>
+        <text x="113" y="42" font-size="12" font-weight="800" text-anchor="middle" fill="#14532D">Paddock Lab Soil Test</text>
+        <text x="32" y="66" font-size="10" font-weight="700" fill="#44403c">pH (CaCl2)</text><rect x="32" y="72" width="160" height="26" rx="7" fill="#fff" stroke="#A8A29E" stroke-width="2"/><text x="42" y="90" font-size="12" fill="#14532D" font-weight="700">6.8</text>
+        <text x="32" y="116" font-size="10" font-weight="700" fill="#44403c">Deep N (kg/ha)</text><rect x="32" y="122" width="160" height="26" rx="7" fill="#fff" stroke="#A8A29E" stroke-width="2"/><text x="42" y="140" font-size="12" fill="#14532D" font-weight="700">85</text>
+        <rect x="32" y="158" width="70" height="26" rx="8" fill="#166534"/><text x="67" y="175" font-size="11" font-weight="800" fill="#fff" text-anchor="middle">Apply</text>
+        <rect x="110" y="158" width="62" height="26" rx="8" fill="#fff" stroke="#A8A29E" stroke-width="2"/><text x="141" y="175" font-size="11" font-weight="800" fill="#14532D" text-anchor="middle">Clear</text>
+        <rect x="32" y="190" width="150" height="16" rx="8" fill="#FEF3C7" stroke="#FCD34D"/><text x="107" y="202" font-size="8" font-weight="800" fill="#78350F" text-anchor="middle">Farmer Lab Soil Test</text>
+        ${['Lab Soil Test', 'Viability Score', 'Sowing & Frost/Heat Calendar', 'Satellite & Soil Readings', 'AI Ethics & Agronomist Check'].map((t, i) => `
+          <rect x="228" y="${22 + i * 38}" width="234" height="30" rx="9" fill="#FBFAF5" stroke="#D9D4BF"/>
+          <circle cx="246" cy="${37 + i * 38}" r="9" fill="#D97706"/><text x="246" y="${41 + i * 38}" font-size="10" font-weight="800" text-anchor="middle" fill="#fff">${i + 1}</text>
+          <text x="262" y="${41 + i * 38}" font-size="11" font-weight="700" fill="#14532D">${t}</text><text x="446" y="${41 + i * 38}" font-size="10" fill="#166534">▼</text>`).join('')}`, 'Lab override inputs and five collapsible drawers')
     }
   ];
-
+  let slide = 0;
+  const tutModal = $('#tutModal');
+  function renderSlide() {
+    const s = SLIDES[slide];
+    $('#tutKicker').textContent = s.kicker + ' · ' + (slide + 1) + '/' + SLIDES.length;
+    $('#tutTitle').textContent = s.title;
+    $('#tutArt').innerHTML = s.svg;
+    $('#tutText').textContent = s.text;
+    $('#tutBullets').innerHTML = s.bullets.map(b => `<li class="flex gap-2"><span class="text-[#D97706] font-extrabold">●</span><span>${esc(b)}</span></li>`).join('');
+    $('#tutDots').innerHTML = SLIDES.map((_, i) => `<button type="button" data-dot="${i}" role="tab" aria-selected="${i === slide}" aria-label="Go to slide ${i + 1}" class="h-3 rounded-full transition-all ${i === slide ? 'w-7 bg-[#166534]' : 'w-3 bg-stone-300 hover:bg-stone-400'}"></button>`).join('');
+    $('#tutPrev').disabled = slide === 0;
+    $('#tutPrev').classList.toggle('opacity-40', slide === 0);
+    $('#tutNext').textContent = slide === SLIDES.length - 1 ? 'Done ✔' : 'Next';
+  }
   function openTutorial(i) {
-    state.slide = Math.max(0, Math.min(SLIDES.length - 1, i || 0));
-    $('tutorial').classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
-    renderTutorial();
-    $('tutClose').focus();
+    slide = Math.max(0, Math.min(SLIDES.length - 1, i || 0));
+    renderSlide();
+    tutModal.classList.remove('hidden'); tutModal.classList.add('flex');
+    document.body.classList.add('overflow-hidden');
+    $('#tutNext').focus();
   }
   function closeTutorial() {
-    $('tutorial').classList.add('hidden');
-    document.body.style.overflow = $('mapWrap').classList.contains('map-full') ? 'hidden' : '';
+    tutModal.classList.add('hidden'); tutModal.classList.remove('flex');
+    if (!$('#mapWrap').classList.contains('map-full')) document.body.classList.remove('overflow-hidden');
+    $('#btnHow').focus();
   }
-  function renderTutorial() {
-    var s = SLIDES[state.slide];
-    $('tutKicker').textContent = (state.slide + 1) + ' / ' + SLIDES.length + ' · ' + s.kicker;
-    $('tutTitle').textContent = s.title;
-    $('tutSvg').innerHTML = s.svg();
-    $('tutBody').innerHTML = s.body.map(function (b) { return '<li>' + b + '</li>'; }).join('');
-    $('tutDots').innerHTML = SLIDES.map(function (_, i) { return '<button type="button" class="dot ' + (i === state.slide ? 'active' : '') + '" data-dot="' + i + '" aria-label="Go to slide ' + (i + 1) + '"></button>'; }).join('');
-    Array.prototype.forEach.call($('tutDots').querySelectorAll('button'), function (b) {
-      b.addEventListener('click', function () { state.slide = Number(b.dataset.dot); renderTutorial(); });
+  const tutOpen = () => !tutModal.classList.contains('hidden');
+  /* ---------- events ---------- */
+  function bindEvents() {
+    $('#viewField').addEventListener('click', () => setView('field'));
+    $('#viewData').addEventListener('click', () => setView('data'));
+    $('#btnHow').addEventListener('click', () => openTutorial(0));
+    document.addEventListener('click', e => {
+      const how = e.target.closest('.how-btn');
+      if (how) { openTutorial(parseInt(how.getAttribute('data-slide'), 10)); return; }
+      const q = e.target.closest('[data-quick]');
+      if (q) { const list = E().QUICK_JUMP_REGIONS; selectQuick(list[parseInt(q.getAttribute('data-quick'), 10)], true); return; }
+      const hzb = e.target.closest('[data-horizon]');
+      if (hzb) {
+        const n = parseInt(hzb.getAttribute('data-horizon'), 10);
+        if (n !== state.horizon) { state.horizon = n; renderBaseline(); runEngine(); renderAll(); }
+        return;
+      }
+      const cl = e.target.closest('[data-climate]');
+      if (cl) { state.climate = cl.getAttribute('data-climate'); renderClimate(); runEngine(); renderAll(); return; }
+      const rot = e.target.closest('[data-rot]');
+      if (rot) { state.selected = parseInt(rot.getAttribute('data-rot'), 10); renderStage2(); return; }
+      const dot = e.target.closest('[data-dot]');
+      if (dot) { slide = parseInt(dot.getAttribute('data-dot'), 10); renderSlide(); }
     });
-    $('tutPrev').disabled = state.slide === 0;
-    $('tutPrev').style.opacity = state.slide === 0 ? '.4' : '1';
-    $('tutNext').textContent = state.slide === SLIDES.length - 1 ? 'Done' : 'Next';
-  }
-
-  /* ===================== GLOBAL EVENTS ===================== */
-  function bindGlobal() {
-    $('tutPrev').addEventListener('click', function () { if (state.slide > 0) { state.slide--; renderTutorial(); } });
-    $('tutNext').addEventListener('click', function () {
-      if (state.slide < SLIDES.length - 1) { state.slide++; renderTutorial(); } else closeTutorial();
+    $('#baselineBox').addEventListener('change', e => {
+      const sel = e.target.closest('[data-base]');
+      if (!sel) return;
+      state.baselineCrops[parseInt(sel.getAttribute('data-base'), 10)] = sel.value;
+      renderBaseline(); runEngine(); renderAll();
     });
-    $('tutClose').addEventListener('click', closeTutorial);
-    $('tutorial').addEventListener('click', function (e) { if (e.target === $('tutorial')) closeTutorial(); });
-
-    document.addEventListener('keydown', function (e) {
-      var open = !$('tutorial').classList.contains('hidden');
+    $('#sliders').addEventListener('input', e => {
+      const k = e.target.getAttribute('data-prio');
+      if (!k) return;
+      state.priorities[k] = parseInt(e.target.value, 10);
+      $('#slv_' + k).textContent = e.target.value;
+      runEngine(); renderAll();
+    });
+    $('#searchForm').addEventListener('submit', e => { e.preventDefault(); doSearch($('#searchInput').value); });
+    $('#btnGps').addEventListener('click', useGps);
+    $('#btnYes').addEventListener('click', () => { if (state.result && state.inBasin) goStage(2); });
+    $('#btnReset').addEventListener('click', resetChoices);
+    $('#btnEdit').addEventListener('click', () => goStage(1));
+    $('#labApply').addEventListener('click', applyLab);
+    $('#labClear').addEventListener('click', clearLab);
+    ['labPH', 'labN'].forEach(id => $('#' + id).addEventListener('keydown', e => { if (e.key === 'Enter') applyLab(); }));
+    $('#tutClose').addEventListener('click', closeTutorial);
+    $('#tutBackdrop').addEventListener('click', closeTutorial);
+    $('#tutPrev').addEventListener('click', () => { if (slide > 0) { slide--; renderSlide(); } });
+    $('#tutNext').addEventListener('click', () => { if (slide < SLIDES.length - 1) { slide++; renderSlide(); } else closeTutorial(); });
+    document.addEventListener('keydown', e => {
       if (e.key === 'Escape') {
-        if (open) closeTutorial();
-        else if ($('mapWrap').classList.contains('map-full')) toggleFullscreen(false);
-        Array.prototype.forEach.call(document.querySelectorAll('.tipwrap.open'), function (t) { t.classList.remove('open'); });
-      } else if (open && e.key === 'ArrowRight') { $('tutNext').click(); }
-      else if (open && e.key === 'ArrowLeft') { $('tutPrev').click(); }
-      else if ((e.key === 'Enter' || e.key === ' ') && e.target && e.target.classList && e.target.classList.contains('tipwrap')) {
-        e.preventDefault(); e.target.classList.toggle('open');
-      }
-    });
-
-    document.addEventListener('click', function (e) {
-      var h = e.target.closest ? e.target.closest('[data-slide]') : null;
-      if (h) { e.preventDefault(); e.stopPropagation(); openTutorial(Number(h.dataset.slide)); return; }
-      var tw = e.target.closest ? e.target.closest('.tipwrap') : null;
-      Array.prototype.forEach.call(document.querySelectorAll('.tipwrap.open'), function (t) { if (t !== tw) t.classList.remove('open'); });
-      if (tw) {
-        // inside a <summary> or label, avoid toggling parents
-        if (tw.closest('summary')) e.preventDefault();
-        tw.classList.toggle('open');
+        if (tutOpen()) closeTutorial();
+        else if ($('#mapWrap').classList.contains('map-full')) toggleMapFull();
+        else { tipPinned = null; hideTip(); }
+      } else if (tutOpen()) {
+        if (e.key === 'ArrowRight' && slide < SLIDES.length - 1) { slide++; renderSlide(); }
+        if (e.key === 'ArrowLeft' && slide > 0) { slide--; renderSlide(); }
       }
     });
   }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
-  else init();
+  /* ---------- startup ---------- */
+  async function loadJSON(url) {
+    const r = await fetch(url, { cache: 'no-cache' });
+    if (!r.ok) throw new Error('HTTP ' + r.status + ' for ' + url);
+    return r.json();
+  }
+  async function init() {
+    renderSliders();
+    renderClimate();
+    renderBaseline();
+    bindEvents();
+    setView('field');
+    let grid = null, meta = null;
+    try {
+      const [g, m] = await Promise.all([loadJSON(GRID_URL), loadJSON(META_URL)]);
+      grid = Array.isArray(g) ? g : (g.grid || g.cells || g.data || []);
+      meta = m;
+      if (!grid.length) throw new Error('Grid file was empty');
+    } catch (err) {
+      state.usingFallback = true;
+      grid = [Object.assign({}, FALLBACK_CELL)];
+      meta = FALLBACK_META;
+      const fb = $('#fallbackBanner');
+      fb.innerHTML = '<b>Sample mode:</b> could not load <code>./data_processed/</code> files (' + esc(err.message) + '). If you opened this page directly from disk (<code>file://</code>), start a local server (e.g. <code>python -m http.server</code>) or use GitHub Pages to load all 784 grid cells. Showing one built-in sample point at Griffith, NSW.';
+      fb.classList.remove('hidden');
+    }
+    grid.forEach(c => { if (!isNum(c.lng)) { const alt = isNum(c.lon) ? c.lon : c.longitude; if (isNum(alt)) c.lng = alt; } if (!isNum(c.lat) && isNum(c.latitude)) c.lat = c.latitude; });
+    state.grid = grid;
+    state.meta = meta;
+    if (!E()) {
+      const eb = $('#engineBanner');
+      eb.textContent = 'The agronomic engine (./js/agronomic_engine.js) did not load, so rotation plans cannot be calculated.';
+      eb.classList.remove('hidden');
+    }
+    initMap();
+    renderBaseline();
+    const list = (E() && E().QUICK_JUMP_REGIONS) || [];
+    const griffith = list.find(r => /griffith/i.test(r.name)) || FALLBACK_GRIFFITH;
+    renderQuick();
+    if (E()) selectQuick(griffith, false);
+    else { state.pin = { lat: griffith.lat, lng: griffith.lng, quick: griffith, label: griffith.name }; state.cell = grid[0]; updateMapMarker(false); renderLocation(); renderSummary(); }
+    map.setView([griffith.lat, griffith.lng], 7);
+  }
+  init();
 })();
 </script>
 </body>
