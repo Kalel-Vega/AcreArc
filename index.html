@@ -716,7 +716,7 @@
         ? `<div class="mt-3 flex items-center justify-between gap-2"><span class="text-xs font-bold text-stone-500 uppercase">Overall</span>${sm ? badge(sm.overallRating) : ''}</div>`
         : `<div class="mt-3 grid grid-cols-3 gap-2 text-center">
              <div class="rounded-lg bg-[#F7F5EE] p-1.5"><div class="text-base font-extrabold text-[#14532D]">${fmt(s.avgYield, 2)}</div><div class="text-[10px] text-stone-500 font-semibold">t/ha/yr</div></div>
-             <div class="rounded-lg bg-[#F7F5EE] p-1.5"><div class="text-base font-extrabold text-[#14532D]">${money(s.avgGrossValue)}</div><div class="text-[10px] text-stone-500 font-semibold">AUD/ha/yr</div></div>
+             <div class="rounded-lg bg-[#F7F5EE] p-1.5"><div class="text-base font-extrabold text-[#14532D]">${money(s.avgGrossValue)}</div><div class="text-[10px] text-stone-500 font-semibold">$/ha/yr</div></div>
              <div class="rounded-lg bg-[#F7F5EE] p-1.5"><div class="text-base font-extrabold ${s.deltaYield >= 0 ? 'text-green-700' : 'text-red-700'}">${signed(s.deltaYield, 2)}</div><div class="text-[10px] text-stone-500 font-semibold">t/ha vs routine</div></div>
            </div>`;
       return `<button type="button" class="rot-card" data-rot="${i}" aria-pressed="${state.selected === i}">
@@ -797,13 +797,13 @@
           ${tile('Expected Harvest', 'How many tonnes of grain you can expect per hectare each year, averaged across the ' + n + '-year rotation.', 'yield',
             `<div class="text-3xl font-extrabold text-[#14532D]">${fmt(s.avgYield, 2)} <span class="text-sm font-semibold text-stone-600">t/ha/yr</span></div><div class="text-xs text-stone-600">Likely range ${fmt(lo, 2)} – ${fmt(hi, 2)} t/ha</div>`)}
           ${tile('Average Gross Value', 'Estimated income per hectare per year before costs, based on typical grain prices and the expected harvest.', 'yield',
-            `<div class="text-3xl font-extrabold text-[#14532D]">${money(s.avgGrossValue)} <span class="text-sm font-semibold text-stone-600">AUD/ha/yr</span></div>` +
+            `<div class="text-3xl font-extrabold text-[#14532D]">${money(s.avgGrossValue)} <span class="text-sm font-semibold text-stone-600">$/ha/yr</span></div>` +
             (isBase ? `<div class="text-xs text-stone-600">Reference value for comparison</div>`
               : `<div class="text-xs font-bold ${s.valueDeltaPct >= 0 ? 'text-green-700' : 'text-red-700'}">${isNum(s.valueDeltaPct) ? signed(s.valueDeltaPct, 1) + '% vs your routine' : ''}</div>`))}
           ${tile('Extra Harvest Gain', 'How much more (or less) grain and income per hectare this rotation gives compared with your current routine.', 'yield',
             isBase ? `<div class="text-xl font-extrabold text-stone-500">Reference</div><div class="text-xs text-stone-600">Other rotations are measured against this.</div>`
               : `<div class="flex flex-wrap items-baseline gap-x-4 gap-y-1"><div class="text-3xl font-extrabold ${s.deltaYield >= 0 ? 'text-green-700' : 'text-red-700'}">${signed(s.deltaYield, 2)} <span class="text-sm font-semibold text-stone-600">t/ha</span></div>
-                 <div class="text-lg font-extrabold ${s.valueDelta >= 0 ? 'text-green-700' : 'text-red-700'}">${isNum(s.valueDelta) ? (s.valueDelta >= 0 ? '+' : '−') + money(Math.abs(s.valueDelta)) : '—'} <span class="text-xs font-semibold text-stone-600">AUD/ha/yr</span></div></div>
+                 <div class="text-lg font-extrabold ${s.valueDelta >= 0 ? 'text-green-700' : 'text-red-700'}">${isNum(s.valueDelta) ? (s.valueDelta >= 0 ? '+' : '−') + money(Math.abs(s.valueDelta)) : '—'} <span class="text-xs font-semibold text-stone-600">$/ha/yr</span></div></div>
                  <div class="text-xs text-stone-600">${isNum(s.deltaPct) ? signed(s.deltaPct, 1) + '% harvest vs your routine' : ''}</div>`, 'sm:col-span-2')}
         </div>
         ${tile('Forecast Confidence', 'How sure the AI is. Each bar is one of 100 decision trees; more filled bars means the trees agree more.', 'confidence',
@@ -1180,7 +1180,7 @@
     {
       kicker: 'Results · Field View vs Data View', title: 'Compare rotations your way',
       text: 'Stage 2 lists three AI rotations (#1 Top Pick, #2, #3), each with a score out of 100, above two cards: your current routine versus the rotation you select.',
-      bullets: ['Field View: colour-coded badges — EXCELLENT, GOOD, AVERAGE, NEEDS IMPROVEMENT, POOR — with plain-English notes and a Next Step on Farm.', 'Data View: harvest t/ha/yr, gross value AUD/ha/yr, extra gain, forecast confidence, nitrogen balance and priority-fit bars, with ? helpers and Source ⓘ tags.', 'Use ← Edit Farm Setup (Revert) to go back; your pin, sliders, routine and season are kept.'],
+      bullets: ['Field View: colour-coded badges — EXCELLENT, GOOD, AVERAGE, NEEDS IMPROVEMENT, POOR — with plain-English notes and a Next Step on Farm.', 'Data View: harvest t/ha/yr, gross value $/ha/yr, extra gain, forecast confidence, nitrogen balance and priority-fit bars, with ? helpers and Source ⓘ tags.', 'Use ← Edit Farm Setup (Revert) to go back; your pin, sliders, routine and season are kept.'],
       svg: SVG_WRAP(`
         <rect x="18" y="18" width="214" height="194" rx="12" fill="#fff" stroke="#D9D4BF"/>
         <text x="125" y="42" font-size="13" font-weight="800" text-anchor="middle" fill="#14532D">Field View</text>
