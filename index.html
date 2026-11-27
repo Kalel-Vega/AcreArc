@@ -389,8 +389,12 @@
     if (!obj) return null;
     return Object.keys(obj).find(k => re.test(k) && isNum(obj[k])) || null;
   }
-  function cellLat(c) { return isNum(c.lat) ? c.lat : (isNum(c.latitude) ? c.latitude : NaN); }
-  function cellLng(c) { return isNum(c.lng) ? c.lng : (isNum(c.lon) ? c.lon : (isNum(c.longitude) ? c.longitude : NaN)); }
+function cellLat(c) {
+  return c ? (c.Latitude ?? c.latitude ?? c.lat ?? null) : null;
+}
+function cellLng(c) {
+  return c ? (c.Longitude ?? c.longitude ?? c.lng ?? null) : null;
+}
   function cellId(c) {
     const k = ['cell_id', 'grid_id', 'id', 'gid', 'ID', 'cellId'].find(x => c[x] != null);
     return k ? String(c[k]) : fmt(cellLat(c), 2) + ', ' + fmt(cellLng(c), 2);
