@@ -1185,7 +1185,7 @@
         <rect x="18" y="18" width="214" height="194" rx="12" fill="#fff" stroke="#D9D4BF"/>
         <text x="125" y="42" font-size="13" font-weight="800" text-anchor="middle" fill="#14532D">Field View</text>
         ${[['Harvest Outlook', 'EXCELLENT', '#15803D'], ['Drought Reliability', 'GOOD', '#4D7C0F'], ['Soil & Nitrogen', 'AVERAGE', '#FBBF24'], ['Weather Risk', 'POOR', '#B91C1C']].map((r, i) => `
-          <text x="32" y="${74 + i * 36}" font-size="11" font-weight="700" fill="#44403c">${r[0]}</text>
+          <text x="32" y="${74 + i * 36}" font-size="10" font-weight="700" fill="#44403c">${r[0]}</text>
           <rect x="130" y="${60 + i * 36}" width="88" height="22" rx="11" fill="${r[2]}"/><text x="174" y="${75 + i * 36}" font-size="9" font-weight="800" text-anchor="middle" fill="${r[1] === 'AVERAGE' ? '#1c1917' : '#fff'}">${r[1]}</text>`).join('')}
         <rect x="248" y="18" width="214" height="194" rx="12" fill="#fff" stroke="#D9D4BF"/>
         <text x="355" y="42" font-size="13" font-weight="800" text-anchor="middle" fill="#14532D">Data View</text>
